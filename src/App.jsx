@@ -93,7 +93,8 @@ function App() {
     const resizedCanvas = document.createElement("canvas");
 
     const aspectRatio = originalImg.height / originalImg.width;
-    resizedCanvas.width = originalImg.width;
+    // resizedCanvas.width = originalImg.width;
+    resizedCanvas.width = 1000;
     resizedCanvas.height = Math.round(resizedCanvas.width * aspectRatio);
 
     // Use pica to resize the main image
@@ -126,13 +127,14 @@ function App() {
 
         return picaInstance.resize(tile, tileCanvas).then(() => {
           processedTiles++;
-          setProgress(Math.round((processedTiles / imageFiles.length) * 100));
+          setProgress(Math.round((processedTiles / imageFiles.length) * 50));
           return {
             canvas: tileCanvas,
             color: getAverageColor(
               tileCtx.getImageData(0, 0, tileWidth, tileHeight).data
             ),
             count: 0, // Track how many times this tile has been used
+            positions: [], // Track positions where the tile is used
           };
         });
       })
@@ -140,9 +142,18 @@ function App() {
 
     const availableTiles = [...tileCanvases];
 
+    const totalTilesX = Math.ceil(mainCanvas.width / tileWidth);
+    const totalTilesY = Math.ceil(mainCanvas.height / tileHeight);
+    const totalTiles = totalTilesX * totalTilesY;
+    let currentTile = 0;
     // Create the mosaic
     for (let y = 0; y < mainCanvas.height; y += tileHeight) {
+      const progressPercent = Math.round((currentTile / totalTiles) * 100);
+
+      console.log("✅", 50 + progressPercent / 2);
+      setProgress(50 + progressPercent / 2); // This line doesn't work
       for (let x = 0; x < mainCanvas.width; x += tileWidth) {
+        currentTile++;
         if (availableTiles.length === 0) {
           console.warn("Not enough unique tiles to fill the mosaic.");
           break;
@@ -153,11 +164,64 @@ function App() {
         const bestMatchIndex = findBestMatchTileIndex(avgColor, availableTiles);
         const bestMatchTile = availableTiles[bestMatchIndex];
 
-        mosaicCtx.drawImage(bestMatchTile.canvas, x, y, tileWidth, tileHeight);
+        const isAdjacent = (pos) =>
+          Math.abs(pos.x - x) <= tileWidth && Math.abs(pos.y - y) <= tileHeight;
 
-        bestMatchTile.count++;
+        //! Ths one accepts diagonals
+        // const isAdjacent = (pos) =>
+        //   (pos.x === x && Math.abs(pos.y - y) === tileHeight) || //? Above or below
+        //   (pos.y === y && Math.abs(pos.x - x) === tileWidth); //? Left or right
 
-        if (!reuseTiles) {
+        // console.log(
+        //   bestMatchTile.positions,
+        //   { x, y },
+        //   bestMatchTile.positions.some(isAdjacent)
+        // );
+        if (bestMatchTile.positions.some(isAdjacent)) {
+          // Find another tile if this one is adjacent
+          const nonAdjacentTile = availableTiles.find(
+            (tile) =>
+              !tile.positions.some(isAdjacent) && tile.count < reuseTilesCount
+          );
+          // console.log({ ...nonAdjacentTile }, nonAdjacentTile?.canvas);
+
+          if (nonAdjacentTile?.canvas) {
+            mosaicCtx.drawImage(
+              nonAdjacentTile.canvas,
+              x,
+              y,
+              tileWidth,
+              tileHeight
+            );
+            nonAdjacentTile.count += 1;
+            nonAdjacentTile.positions.push({ x, y });
+            if (nonAdjacentTile.count >= reuseTilesCount) {
+              availableTiles.splice(availableTiles.indexOf(nonAdjacentTile), 1);
+            }
+          } else {
+            mosaicCtx.drawImage(
+              bestMatchTile.canvas,
+              x,
+              y,
+              tileWidth,
+              tileHeight
+            );
+            bestMatchTile.count += 1;
+            bestMatchTile.positions.push({ x, y });
+            if (bestMatchTile.count >= reuseTilesCount) {
+              availableTiles.splice(bestMatchIndex, 1);
+            }
+          }
+        } else {
+          mosaicCtx.drawImage(
+            bestMatchTile.canvas,
+            x,
+            y,
+            tileWidth,
+            tileHeight
+          );
+          bestMatchTile.count += 1;
+          bestMatchTile.positions.push({ x, y });
           if (bestMatchTile.count >= reuseTilesCount) {
             availableTiles.splice(bestMatchIndex, 1);
           }
@@ -340,7 +404,9 @@ function App() {
           {isLoading && <Progress value={progress} size="lg" w="100%" />}
         </VStack>
         <Flex mt={5} justify="center">
-          {mainImageURL && <ChakraImage src={mainImageURL} alt="Main" mx={2} />}
+          {mainImageURL && (
+            <ChakraImage w="1000px" src={mainImageURL} alt="Main" mx={2} />
+          )}
           {mosaicImage && (
             <Box
               border="1px solid"
@@ -349,7 +415,7 @@ function App() {
               borderRadius="md"
               mx={2}
             >
-              <ChakraImage src={mosaicImage} alt="Mosaic" />
+              <ChakraImage w="1000px" src={mosaicImage} alt="Mosaic" />
             </Box>
           )}
         </Flex>
