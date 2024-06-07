@@ -6,12 +6,14 @@ import {
   Input,
   FormControl,
   FormLabel,
-  Spinner,
+  Progress,
   useToast,
   VStack,
   HStack,
   Heading,
   Flex,
+  Image as ChakraImage,
+  Checkbox,
 } from "@chakra-ui/react";
 import pica from "pica";
 
@@ -19,11 +21,17 @@ function App() {
   const [mainImage, setMainImage] = useState(null);
   const [mainImageURL, setMainImageURL] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
+  const [reuseTiles, setReuseTiles] = useState();
+  const [reuseTilesCount, setReuseTilesCount] = useState(0);
+
+  // console.log(reuseTilesCount);
+
   const [tileWidth, setTileWidth] = useState(10);
   const [tileHeight, setTileHeight] = useState(10);
   const [mosaicImage, setMosaicImage] = useState(null);
   const [tiles, setTiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const toast = useToast();
 
   useEffect(() => {
@@ -31,6 +39,7 @@ function App() {
       loadTiles();
     }
   }, [imageFiles]);
+  // // console.log(progress);
 
   const handleMainImageChange = (e) => {
     const file = e.target.files[0];
@@ -75,14 +84,16 @@ function App() {
   };
 
   const createMosaic = async (mainImageFile, tiles, tileWidth, tileHeight) => {
+    setProgress(0);
     const originalImg = await loadImage(mainImageFile);
     const picaInstance = pica();
 
     // Create a canvas to resize the main image
     const resizedCanvas = document.createElement("canvas");
+
     const aspectRatio = originalImg.height / originalImg.width;
-    resizedCanvas.width = 1000; // fixed width
-    resizedCanvas.height = Math.round(resizedCanvas.width * aspectRatio); // maintain aspect ratio
+    resizedCanvas.width = originalImg.width;
+    resizedCanvas.height = Math.round(resizedCanvas.width * aspectRatio);
 
     // Use pica to resize the main image
     await picaInstance.resize(originalImg, resizedCanvas);
@@ -102,7 +113,7 @@ function App() {
       willReadFrequently: true,
     });
 
-    // Resize tile images
+    let processedTiles = 0;
     const tileCanvases = await Promise.all(
       tiles.map((tile) => {
         const tileCanvas = document.createElement("canvas");
@@ -111,7 +122,10 @@ function App() {
         const tileCtx = tileCanvas.getContext("2d", {
           willReadFrequently: true,
         });
+
         return picaInstance.resize(tile, tileCanvas).then(() => {
+          processedTiles++;
+          setProgress(Math.round((processedTiles / imageFiles.length) * 100));
           return {
             canvas: tileCanvas,
             color: getAverageColor(
@@ -140,7 +154,9 @@ function App() {
         mosaicCtx.drawImage(bestMatchTile.canvas, x, y, tileWidth, tileHeight);
 
         //! Uncomment this line if you don't want to reuse the same tile
-        // availableTiles.splice(bestMatchIndex, 1);
+        if (!reuseTiles) {
+          availableTiles.splice(bestMatchIndex, 1);
+        }
       }
     }
 
@@ -207,7 +223,7 @@ function App() {
   return (
     <ChakraProvider>
       <Box p={5}>
-        <VStack spacing={5}>
+        <VStack spacing={5} maxW="500px">
           <Heading>Mosaic Image Generator</Heading>
           <FormControl id="mainImage">
             <FormLabel>Main Image</FormLabel>
@@ -242,16 +258,39 @@ function App() {
           >
             Create Mosaic
           </Button>
-          {isLoading && <Spinner size="xl" />}
-          <Flex>
-            {mainImageURL && <img src={mainImageURL} alt="Main" />}{" "}
-            {mosaicImage && (
-              <Box>
-                <img src={mosaicImage} alt="Mosaic" />
-              </Box>
-            )}
-          </Flex>
+          <FormControl id="reuseTiles">
+            <FormLabel>Reuse Tiles</FormLabel>
+            <Checkbox onChange={(e) => setReuseTiles(e.target.checked)} />
+          </FormControl>
+
+          {reuseTiles && (
+            <FormControl id="reuseCount">
+              <FormLabel>
+                Reuse Count:{" "}
+                {reuseTilesCount > 0 ? reuseTilesCount : "Infinity"}
+              </FormLabel>
+              <Input
+                type="range"
+                min={0}
+                max={10}
+                value={reuseTilesCount || 0}
+                onChange={(e) => setReuseTilesCount(e.target.value)}
+              />
+            </FormControl>
+          )}
+
+          {isLoading && (
+            <Progress value={progress} size="xl" w="300px" h="10px" />
+          )}
         </VStack>
+        <Flex>
+          {mainImageURL && <ChakraImage src={mainImageURL} alt="Main" />}
+          {mosaicImage && (
+            <Box>
+              <ChakraImage src={mosaicImage} alt="Mosaic" />
+            </Box>
+          )}
+        </Flex>
       </Box>
     </ChakraProvider>
   );
