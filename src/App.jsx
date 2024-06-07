@@ -75,14 +75,26 @@ function App() {
   };
 
   const createMosaic = async (mainImageFile, tiles, tileWidth, tileHeight) => {
-    const mainImg = await loadImage(mainImageFile);
+    const originalImg = await loadImage(mainImageFile);
+    const picaInstance = pica();
+
+    // Create a canvas to resize the main image
+    const resizedCanvas = document.createElement("canvas");
+    const aspectRatio = originalImg.height / originalImg.width;
+    resizedCanvas.width = 1000; // fixed width
+    resizedCanvas.height = Math.round(resizedCanvas.width * aspectRatio); // maintain aspect ratio
+
+    // Use pica to resize the main image
+    await picaInstance.resize(originalImg, resizedCanvas);
+
+    // Draw the resized image on a new canvas
     const mainCanvas = document.createElement("canvas");
     const mainCtx = mainCanvas.getContext("2d", { willReadFrequently: true });
+    mainCanvas.width = resizedCanvas.width;
+    mainCanvas.height = resizedCanvas.height;
+    mainCtx.drawImage(resizedCanvas, 0, 0);
 
-    mainCanvas.width = mainImg.width;
-    mainCanvas.height = mainImg.height;
-    mainCtx.drawImage(mainImg, 0, 0);
-
+    // Create a canvas for the mosaic
     const mosaicCanvas = document.createElement("canvas");
     mosaicCanvas.width = mainCanvas.width;
     mosaicCanvas.height = mainCanvas.height;
@@ -90,8 +102,7 @@ function App() {
       willReadFrequently: true,
     });
 
-    const picaInstance = pica();
-
+    // Resize tile images
     const tileCanvases = await Promise.all(
       tiles.map((tile) => {
         const tileCanvas = document.createElement("canvas");
@@ -113,6 +124,7 @@ function App() {
 
     const availableTiles = [...tileCanvases];
 
+    // Create the mosaic
     for (let y = 0; y < mainCanvas.height; y += tileHeight) {
       for (let x = 0; x < mainCanvas.width; x += tileWidth) {
         if (availableTiles.length === 0) {
@@ -127,7 +139,7 @@ function App() {
 
         mosaicCtx.drawImage(bestMatchTile.canvas, x, y, tileWidth, tileHeight);
 
-        // Uncomment this line if you don't want to reuse the same tile
+        //! Uncomment this line if you don't want to reuse the same tile
         // availableTiles.splice(bestMatchIndex, 1);
       }
     }
@@ -235,7 +247,6 @@ function App() {
             {mainImageURL && <img src={mainImageURL} alt="Main" />}{" "}
             {mosaicImage && (
               <Box>
-                <Heading size="md">Mosaic Image</Heading>
                 <img src={mosaicImage} alt="Mosaic" />
               </Box>
             )}
