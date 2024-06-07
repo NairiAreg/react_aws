@@ -141,19 +141,25 @@ function App() {
     );
 
     const availableTiles = [...tileCanvases];
+    const delay = () => new Promise((resolve) => setTimeout(resolve, 0));
 
     const totalTilesX = Math.ceil(mainCanvas.width / tileWidth);
     const totalTilesY = Math.ceil(mainCanvas.height / tileHeight);
     const totalTiles = totalTilesX * totalTilesY;
     let currentTile = 0;
+
     // Create the mosaic
     for (let y = 0; y < mainCanvas.height; y += tileHeight) {
-      const progressPercent = Math.round((currentTile / totalTiles) * 100);
-
-      console.log("✅", 50 + progressPercent / 2);
-      setProgress(50 + progressPercent / 2); // This line doesn't work
+      const progressPercent = 50 + Math.round((currentTile / totalTiles) * 50);
+      console.log(progressPercent);
+      setProgress(() => progressPercent);
+      await delay(); //! This is THE ONLY WAY to update the progress bar
       for (let x = 0; x < mainCanvas.width; x += tileWidth) {
         currentTile++;
+        if (currentTile % 10 === 0) {
+          // Update progress every 10 tiles
+        }
+
         if (availableTiles.length === 0) {
           console.warn("Not enough unique tiles to fill the mosaic.");
           break;
@@ -172,18 +178,12 @@ function App() {
         //   (pos.x === x && Math.abs(pos.y - y) === tileHeight) || //? Above or below
         //   (pos.y === y && Math.abs(pos.x - x) === tileWidth); //? Left or right
 
-        // console.log(
-        //   bestMatchTile.positions,
-        //   { x, y },
-        //   bestMatchTile.positions.some(isAdjacent)
-        // );
         if (bestMatchTile.positions.some(isAdjacent)) {
           // Find another tile if this one is adjacent
           const nonAdjacentTile = availableTiles.find(
             (tile) =>
               !tile.positions.some(isAdjacent) && tile.count < reuseTilesCount
           );
-          // console.log({ ...nonAdjacentTile }, nonAdjacentTile?.canvas);
 
           if (nonAdjacentTile?.canvas) {
             mosaicCtx.drawImage(
