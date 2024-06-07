@@ -14,7 +14,11 @@ import {
   Flex,
   Image as ChakraImage,
   Checkbox,
+  Text,
+  IconButton,
 } from "@chakra-ui/react";
+import { FaFileUpload } from "react-icons/fa";
+
 import pica from "pica";
 
 function App() {
@@ -23,8 +27,6 @@ function App() {
   const [imageFiles, setImageFiles] = useState([]);
   const [reuseTiles, setReuseTiles] = useState();
   const [reuseTilesCount, setReuseTilesCount] = useState(0);
-
-  // console.log(reuseTilesCount);
 
   const [tileWidth, setTileWidth] = useState(10);
   const [tileHeight, setTileHeight] = useState(10);
@@ -39,7 +41,6 @@ function App() {
       loadTiles();
     }
   }, [imageFiles]);
-  // // console.log(progress);
 
   const handleMainImageChange = (e) => {
     const file = e.target.files[0];
@@ -131,6 +132,7 @@ function App() {
             color: getAverageColor(
               tileCtx.getImageData(0, 0, tileWidth, tileHeight).data
             ),
+            count: 0, // Track how many times this tile has been used
           };
         });
       })
@@ -153,9 +155,12 @@ function App() {
 
         mosaicCtx.drawImage(bestMatchTile.canvas, x, y, tileWidth, tileHeight);
 
-        //! Uncomment this line if you don't want to reuse the same tile
+        bestMatchTile.count++;
+
         if (!reuseTiles) {
-          availableTiles.splice(bestMatchIndex, 1);
+          if (bestMatchTile.count >= reuseTilesCount) {
+            availableTiles.splice(bestMatchIndex, 1);
+          }
         }
       }
     }
@@ -223,15 +228,68 @@ function App() {
   return (
     <ChakraProvider>
       <Box p={5}>
-        <VStack spacing={5} maxW="500px">
+        <VStack spacing={5} maxW="600px" mx="auto">
           <Heading>Mosaic Image Generator</Heading>
           <FormControl id="mainImage">
             <FormLabel>Main Image</FormLabel>
-            <Input type="file" onChange={handleMainImageChange} />
+            <Box
+              border="1px dashed"
+              borderColor="gray.300"
+              p={3}
+              borderRadius="md"
+            >
+              <Flex align="center">
+                <IconButton
+                  icon={<FaFileUpload />}
+                  aria-label="Upload Main Image"
+                  as="label"
+                  htmlFor="main-image-input"
+                  colorScheme="teal"
+                  variant="outline"
+                />
+                <Input
+                  id="main-image-input"
+                  type="file"
+                  onChange={handleMainImageChange}
+                  hidden
+                />
+                <Text ml={3}>
+                  {mainImage ? mainImage.name : "Click to upload main image"}
+                </Text>
+              </Flex>
+            </Box>
           </FormControl>
           <FormControl id="tileImages">
             <FormLabel>Tile Images</FormLabel>
-            <Input type="file" multiple onChange={handleTileImagesChange} />
+            <Box
+              border="1px dashed"
+              borderColor="gray.300"
+              p={3}
+              borderRadius="md"
+            >
+              <Flex align="center">
+                <IconButton
+                  icon={<FaFileUpload />}
+                  aria-label="Upload Tile Images"
+                  as="label"
+                  htmlFor="tile-images-input"
+                  colorScheme="teal"
+                  variant="outline"
+                />
+                <Input
+                  id="tile-images-input"
+                  type="file"
+                  multiple
+                  onChange={handleTileImagesChange}
+                  hidden
+                />
+                <Text ml={3}>
+                  {imageFiles.length > 0
+                    ? `${imageFiles.length} files selected`
+                    : "Click to upload tile images"}
+                </Text>
+              </Flex>
+            </Box>
           </FormControl>
           <HStack spacing={5}>
             <FormControl id="tileWidth">
@@ -279,14 +337,18 @@ function App() {
             </FormControl>
           )}
 
-          {isLoading && (
-            <Progress value={progress} size="xl" w="300px" h="10px" />
-          )}
+          {isLoading && <Progress value={progress} size="lg" w="100%" />}
         </VStack>
-        <Flex>
-          {mainImageURL && <ChakraImage src={mainImageURL} alt="Main" />}
+        <Flex mt={5} justify="center">
+          {mainImageURL && <ChakraImage src={mainImageURL} alt="Main" mx={2} />}
           {mosaicImage && (
-            <Box>
+            <Box
+              border="1px solid"
+              borderColor="gray.300"
+              p={2}
+              borderRadius="md"
+              mx={2}
+            >
               <ChakraImage src={mosaicImage} alt="Mosaic" />
             </Box>
           )}
