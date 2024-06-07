@@ -13,9 +13,12 @@ import {
   Heading,
   Flex,
   Image as ChakraImage,
-  Checkbox,
   Text,
   IconButton,
+  Table,
+  Tbody,
+  Td,
+  Tr,
 } from "@chakra-ui/react";
 import { FaFileUpload } from "react-icons/fa";
 
@@ -25,9 +28,8 @@ function App() {
   const [mainImage, setMainImage] = useState(null);
   const [mainImageURL, setMainImageURL] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
-  const [reuseTiles, setReuseTiles] = useState();
   const [reuseTilesCount, setReuseTilesCount] = useState(0);
-
+  const [radius, setRadius] = useState(3);
   const [tileWidth, setTileWidth] = useState(10);
   const [tileHeight, setTileHeight] = useState(10);
   const [mosaicImage, setMosaicImage] = useState(null);
@@ -151,7 +153,6 @@ function App() {
     // Create the mosaic
     for (let y = 0; y < mainCanvas.height; y += tileHeight) {
       const progressPercent = 50 + Math.round((currentTile / totalTiles) * 50);
-      console.log(progressPercent);
       setProgress(() => progressPercent);
       await delay(); //! This is THE ONLY WAY to update the progress bar
       for (let x = 0; x < mainCanvas.width; x += tileWidth) {
@@ -170,13 +171,11 @@ function App() {
         const bestMatchIndex = findBestMatchTileIndex(avgColor, availableTiles);
         const bestMatchTile = availableTiles[bestMatchIndex];
 
-        const isAdjacent = (pos) =>
-          Math.abs(pos.x - x) <= tileWidth && Math.abs(pos.y - y) <= tileHeight;
-
-        //! Ths one accepts diagonals
-        // const isAdjacent = (pos) =>
-        //   (pos.x === x && Math.abs(pos.y - y) === tileHeight) || //? Above or below
-        //   (pos.y === y && Math.abs(pos.x - x) === tileWidth); //? Left or right
+        const isAdjacent = (pos) => {
+          const deltaX = Math.abs(pos.x - x);
+          const deltaY = Math.abs(pos.y - y);
+          return deltaX <= radius * tileWidth && deltaY <= radius * tileHeight;
+        };
 
         if (bestMatchTile.positions.some(isAdjacent)) {
           // Find another tile if this one is adjacent
@@ -195,7 +194,10 @@ function App() {
             );
             nonAdjacentTile.count += 1;
             nonAdjacentTile.positions.push({ x, y });
-            if (nonAdjacentTile.count >= reuseTilesCount) {
+            if (
+              nonAdjacentTile.count >= reuseTilesCount &&
+              reuseTilesCount > 0
+            ) {
               availableTiles.splice(availableTiles.indexOf(nonAdjacentTile), 1);
             }
           } else {
@@ -208,7 +210,7 @@ function App() {
             );
             bestMatchTile.count += 1;
             bestMatchTile.positions.push({ x, y });
-            if (bestMatchTile.count >= reuseTilesCount) {
+            if (bestMatchTile.count >= reuseTilesCount && reuseTilesCount > 0) {
               availableTiles.splice(bestMatchIndex, 1);
             }
           }
@@ -222,7 +224,7 @@ function App() {
           );
           bestMatchTile.count += 1;
           bestMatchTile.positions.push({ x, y });
-          if (bestMatchTile.count >= reuseTilesCount) {
+          if (bestMatchTile.count >= reuseTilesCount && reuseTilesCount > 0) {
             availableTiles.splice(bestMatchIndex, 1);
           }
         }
@@ -380,26 +382,31 @@ function App() {
           >
             Create Mosaic
           </Button>
-          <FormControl id="reuseTiles">
-            <FormLabel>Reuse Tiles</FormLabel>
-            <Checkbox onChange={(e) => setReuseTiles(e.target.checked)} />
+
+          <FormControl id="reuseCount">
+            <FormLabel>
+              Reuse Count: {reuseTilesCount > 0 ? reuseTilesCount : "Infinity"}
+            </FormLabel>
+            <Input
+              type="range"
+              min={0}
+              max={10}
+              value={reuseTilesCount || 0}
+              onChange={(e) => setReuseTilesCount(e.target.value)}
+            />
           </FormControl>
 
-          {reuseTiles && (
-            <FormControl id="reuseCount">
-              <FormLabel>
-                Reuse Count:{" "}
-                {reuseTilesCount > 0 ? reuseTilesCount : "Infinity"}
-              </FormLabel>
-              <Input
-                type="range"
-                min={0}
-                max={10}
-                value={reuseTilesCount || 0}
-                onChange={(e) => setReuseTilesCount(e.target.value)}
-              />
-            </FormControl>
-          )}
+          <FormControl id="reuseCount">
+            <FormLabel>Adjacent blocking radius: {radius}</FormLabel>
+            <Input
+              type="range"
+              min={0}
+              max={5}
+              value={radius || 0}
+              onChange={(e) => setRadius(e.target.value)}
+            />
+          </FormControl>
+          <TicTacToeBoard size={1 + radius * 2} />
 
           {isLoading && <Progress value={progress} size="lg" w="100%" />}
         </VStack>
@@ -411,7 +418,6 @@ function App() {
             <Box
               border="1px solid"
               borderColor="gray.300"
-              p={2}
               borderRadius="md"
               mx={2}
             >
@@ -425,3 +431,44 @@ function App() {
 }
 
 export default App;
+
+function createBoard(size) {
+  console.log(size);
+  if (size === 0) {
+    return [["🟨"]];
+  }
+  const board = Array.from({ length: size }, () =>
+    Array.from({ length: size }, () => "❌")
+  );
+  const center = Math.floor(size / 2);
+  board[center][center] = "🟨";
+  return board;
+}
+
+function TicTacToeBoard({ size }) {
+  const board = createBoard(size);
+
+  return (
+    <Table borderWidth="1px" borderColor="black" w="auto">
+      <Tbody>
+        {board.map((row, rowIndex) => (
+          <Tr key={rowIndex}>
+            {row.map((cell, colIndex) => (
+              <Td
+                key={colIndex}
+                borderWidth="1px"
+                borderColor="black"
+                p={0}
+                w="50px"
+                h="50px"
+                textAlign="center"
+              >
+                {cell}
+              </Td>
+            ))}
+          </Tr>
+        ))}
+      </Tbody>
+    </Table>
+  );
+}
