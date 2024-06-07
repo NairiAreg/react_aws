@@ -149,6 +149,7 @@ function App() {
     const totalTilesY = Math.ceil(mainCanvas.height / tileHeight);
     const totalTiles = totalTilesX * totalTilesY;
     let currentTile = 0;
+    let adjacentClones = 0;
 
     // Create the mosaic
     for (let y = 0; y < mainCanvas.height; y += tileHeight) {
@@ -157,15 +158,10 @@ function App() {
       await delay(); //! This is THE ONLY WAY to update the progress bar
       for (let x = 0; x < mainCanvas.width; x += tileWidth) {
         currentTile++;
-        if (currentTile % 10 === 0) {
-          // Update progress every 10 tiles
-        }
-
         if (availableTiles.length === 0) {
           console.warn("Not enough unique tiles to fill the mosaic.");
           break;
         }
-
         const { data } = mainCtx.getImageData(x, y, tileWidth, tileHeight);
         const avgColor = getAverageColor(data);
         const bestMatchIndex = findBestMatchTileIndex(avgColor, availableTiles);
@@ -181,7 +177,8 @@ function App() {
           // Find another tile if this one is adjacent
           const nonAdjacentTile = availableTiles.find(
             (tile) =>
-              !tile.positions.some(isAdjacent) && tile.count < reuseTilesCount
+              !tile.positions.some(isAdjacent) &&
+              (tile.count < reuseTilesCount || reuseTilesCount === 0)
           );
 
           if (nonAdjacentTile?.canvas) {
@@ -201,6 +198,8 @@ function App() {
               availableTiles.splice(availableTiles.indexOf(nonAdjacentTile), 1);
             }
           } else {
+            adjacentClones++;
+
             mosaicCtx.drawImage(
               bestMatchTile.canvas,
               x,
@@ -229,6 +228,16 @@ function App() {
           }
         }
       }
+    }
+
+    if (adjacentClones > 0) {
+      toast({
+        title: `${adjacentClones} adjacent clones.`,
+        description: `${adjacentClones} tiles were adjacent to themselves because there was no enough space / tiles.`,
+        status: "info",
+        duration: 5000,
+        isClosable: true,
+      });
     }
 
     return new Promise((resolve) => {
@@ -433,7 +442,6 @@ function App() {
 export default App;
 
 function createBoard(size) {
-  console.log(size);
   if (size === 0) {
     return [["🟨"]];
   }
