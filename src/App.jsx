@@ -15,14 +15,11 @@ import {
   Image as ChakraImage,
   Text,
   IconButton,
-  Table,
-  Tbody,
-  Td,
-  Tr,
 } from "@chakra-ui/react";
 import { FaFileUpload } from "react-icons/fa";
 
 import pica from "pica";
+import TicTacToeBoard from "./components/TicTacToeBoard";
 
 function App() {
   const [mainImage, setMainImage] = useState(null);
@@ -164,6 +161,16 @@ function App() {
         }
         const { data } = mainCtx.getImageData(x, y, tileWidth, tileHeight);
         const avgColor = getAverageColor(data);
+
+        // Check if the square is transparent
+        const isTransparent = [avgColor.r, avgColor.g, avgColor.b].every(
+          (c) => c === 0
+        );
+        if (isTransparent) {
+          //TODO Can add a custom image here
+          continue;
+        }
+
         const bestMatchIndex = findBestMatchTileIndex(avgColor, availableTiles);
         const bestMatchTile = availableTiles[bestMatchIndex];
 
@@ -233,7 +240,7 @@ function App() {
     if (adjacentClones > 0) {
       toast({
         title: `${adjacentClones} adjacent clones.`,
-        description: `${adjacentClones} tiles were adjacent to themselves because there was no enough space / tiles.`,
+        description: `${adjacentClones} tiles were adjacent to themselves because there was not enough space / tiles.`,
         status: "info",
         duration: 5000,
         isClosable: true,
@@ -440,43 +447,3 @@ function App() {
 }
 
 export default App;
-
-function createBoard(size) {
-  if (size === 0) {
-    return [["🟨"]];
-  }
-  const board = Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => "❌")
-  );
-  const center = Math.floor(size / 2);
-  board[center][center] = "🟨";
-  return board;
-}
-
-function TicTacToeBoard({ size }) {
-  const board = createBoard(size);
-
-  return (
-    <Table borderWidth="1px" borderColor="black" w="auto">
-      <Tbody>
-        {board.map((row, rowIndex) => (
-          <Tr key={rowIndex}>
-            {row.map((cell, colIndex) => (
-              <Td
-                key={colIndex}
-                borderWidth="1px"
-                borderColor="black"
-                p={0}
-                w="50px"
-                h="50px"
-                textAlign="center"
-              >
-                {cell}
-              </Td>
-            ))}
-          </Tr>
-        ))}
-      </Tbody>
-    </Table>
-  );
-}
