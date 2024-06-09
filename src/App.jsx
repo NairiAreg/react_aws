@@ -95,6 +95,7 @@ function App() {
   };
 
   const loadImagesFromDirectory = async (count) => {
+    setIsLoading(true);
     const images = [];
     let i = 1;
 
@@ -110,6 +111,7 @@ function App() {
     }
 
     setImageFiles(images);
+    setIsLoading(false);
   };
 
   const createMosaic = async (mainImageFile, tiles, tileWidth, tileHeight) => {
@@ -231,7 +233,7 @@ function App() {
           const nonAdjacentTile = availableTiles.find(
             (tile) =>
               !tile.positions.some(isAdjacent) &&
-              (tile.count < reuseTilesCount || reuseTilesCount === 0)
+              (tile.count < reuseTilesCount || +reuseTilesCount === 0)
           );
 
           if (nonAdjacentTile?.canvas) {
