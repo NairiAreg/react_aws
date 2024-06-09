@@ -49,3 +49,13 @@ const colorDistance = (color1, color2) => {
       Math.pow(color1.b - color2.b, 2)
   );
 };
+
+export const isTransparentAlphaChannel = (imageData, edgesCut) => {
+  const pixels = imageData.data;
+  for (let i = 3; i < pixels?.length || 0; i += 4) {
+    if (pixels[i] < edgesCut) {
+      return true;
+    }
+  }
+  return false;
+};

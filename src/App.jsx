@@ -15,17 +15,27 @@ import {
   Image as ChakraImage,
   Text,
   IconButton,
+  Alert,
+  AlertIcon,
 } from "@chakra-ui/react";
 import { FaFileUpload } from "react-icons/fa";
-
 import pica from "pica";
+
 import TicTacToeBoard from "./components/TicTacToeBoard";
+import {
+  findBestMatchTileIndex,
+  getAverageColor,
+  isTransparentAlphaChannel,
+  loadImage,
+} from "./utils/imageUtils";
+import SquareInfo from "./components/SquareInfo";
 
 function App() {
   const [mainImage, setMainImage] = useState(null);
   const [mainImageURL, setMainImageURL] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
   const [reuseTilesCount, setReuseTilesCount] = useState(0);
+  const [drawnTilesState, setDrawnTiles] = useState(0);
   const [radius, setRadius] = useState(0);
   const [edgesCut, setEdgesCut] = useState(1);
   const [tileWidth, setTileWidth] = useState(10);
@@ -84,14 +94,22 @@ function App() {
     setIsLoading(false);
   };
 
-  const isTransparentAlphaChannel = (imageData) => {
-    const pixels = imageData.data;
-    for (let i = 3; i < pixels?.length || 0; i += 4) {
-      if (pixels[i] < edgesCut) {
-        return true;
+  const loadImagesFromDirectory = async (count) => {
+    const images = [];
+    let i = 1;
+
+    while (images.length < count) {
+      const imageUrl = `/imgs/gev_friends/${i}.jpg`; // Adjust the file extension if necessary
+      const response = await fetch(imageUrl);
+      if (response.ok) {
+        const blob = await response.blob();
+        const file = new File([blob], `${i}.jpg`, { type: blob.type });
+        images.push(file);
       }
+      i++;
     }
-    return false;
+
+    setImageFiles(images);
   };
 
   const createMosaic = async (mainImageFile, tiles, tileWidth, tileHeight) => {
@@ -170,6 +188,7 @@ function App() {
     });
 
     // Create the mosaic
+    let drawnTiles = 0;
     for (let y = 0; y < mainCanvas.height; y += tileHeight) {
       const progressPercent = 50 + Math.round((currentTile / totalTiles) * 50);
       setProgress(() => progressPercent);
@@ -189,7 +208,7 @@ function App() {
         const isTransparent = [avgColor.r, avgColor.g, avgColor.b].every(
           (c) => c === 0
         );
-        if (isTransparentAlphaChannel(imageData)) {
+        if (isTransparentAlphaChannel(imageData, edgesCut)) {
           // TODO Can add a custom image here
           if (!isTransparent) {
             //   mosaicCtx.drawImage(customImage, x, y, tileWidth, tileHeight);
@@ -197,7 +216,7 @@ function App() {
           }
           continue;
         }
-
+        drawnTiles++;
         const bestMatchIndex = findBestMatchTileIndex(avgColor, availableTiles);
         const bestMatchTile = availableTiles[bestMatchIndex];
 
@@ -263,6 +282,7 @@ function App() {
         }
       }
     }
+    setDrawnTiles(drawnTiles);
 
     if (adjacentClones > 0) {
       toast({
@@ -280,58 +300,6 @@ function App() {
         resolve(url);
       });
     });
-  };
-
-  const loadImage = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.src = event.target.result;
-      };
-      reader.onerror = (err) => reject(err);
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const getAverageColor = (data, ignoreTransparent) => {
-    let r = 0,
-      g = 0,
-      b = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      r += data[i];
-      g += data[i + 1];
-      b += data[i + 2];
-    }
-    const pixelCount = data.length / 4;
-    return {
-      r: Math.round(r / pixelCount),
-      g: Math.round(g / pixelCount),
-      b: Math.round(b / pixelCount),
-    };
-  };
-
-  const findBestMatchTileIndex = (color, tiles) => {
-    let minDistance = Infinity;
-    let bestMatchIndex = 0;
-    for (let i = 0; i < tiles.length; i++) {
-      const tileColor = tiles[i].color;
-      const distance = colorDistance(color, tileColor);
-      if (distance < minDistance) {
-        minDistance = distance;
-        bestMatchIndex = i;
-      }
-    }
-    return bestMatchIndex;
-  };
-
-  const colorDistance = (color1, color2) => {
-    return Math.sqrt(
-      Math.pow(color1.r - color2.r, 2) +
-        Math.pow(color1.g - color2.g, 2) +
-        Math.pow(color1.b - color2.b, 2)
-    );
   };
 
   return (
@@ -400,6 +368,19 @@ function App() {
               </Flex>
             </Box>
           </FormControl>
+          <Flex gap={2} alignItems="center">
+            Load
+            {[50, 100, 200, 500, 1000, 5000].map((count) => (
+              <Button
+                key={count}
+                onClick={() => loadImagesFromDirectory(count)}
+                isLoading={isLoading}
+              >
+                {count}
+              </Button>
+            ))}
+            Images
+          </Flex>
           <HStack spacing={5}>
             <FormControl id="tileWidth">
               <FormLabel>Tile Width</FormLabel>
@@ -418,6 +399,13 @@ function App() {
               />
             </FormControl>
           </HStack>
+          <SquareInfo width={tileWidth} height={tileHeight} />
+          {drawnTilesState > 0 && (
+            <Alert status="success">
+              <AlertIcon />
+              Used {drawnTilesState} tiles to create the mosaic.
+            </Alert>
+          )}
           <Button
             colorScheme="teal"
             onClick={handleSubmit}
@@ -425,7 +413,6 @@ function App() {
           >
             Create Mosaic
           </Button>
-
           <FormControl id="reuseCount">
             <FormLabel>
               Reuse Count: {reuseTilesCount > 0 ? reuseTilesCount : "Infinity"}
@@ -433,12 +420,11 @@ function App() {
             <Input
               type="range"
               min={0}
-              max={10}
+              max={100}
               value={reuseTilesCount || 0}
               onChange={(e) => setReuseTilesCount(e.target.value)}
             />
           </FormControl>
-
           <FormControl id="reuseCount">
             <FormLabel>Adjacent blocking radius: {radius}</FormLabel>
             <Input
@@ -450,7 +436,6 @@ function App() {
             />
           </FormControl>
           <TicTacToeBoard size={1 + radius * 2} />
-
           <FormControl id="reuseCount">
             <FormLabel>Cut from edges: {edgesCut}</FormLabel>
             <Input
