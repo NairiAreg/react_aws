@@ -26,7 +26,8 @@ function App() {
   const [mainImageURL, setMainImageURL] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
   const [reuseTilesCount, setReuseTilesCount] = useState(0);
-  const [radius, setRadius] = useState(3);
+  const [radius, setRadius] = useState(0);
+  const [edgesCut, setEdgesCut] = useState(1);
   const [tileWidth, setTileWidth] = useState(10);
   const [tileHeight, setTileHeight] = useState(10);
   const [mosaicImage, setMosaicImage] = useState(null);
@@ -83,6 +84,16 @@ function App() {
     setIsLoading(false);
   };
 
+  const isTransparentAlphaChannel = (imageData) => {
+    const pixels = imageData.data;
+    for (let i = 3; i < pixels?.length || 0; i += 4) {
+      if (pixels[i] < edgesCut) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const createMosaic = async (mainImageFile, tiles, tileWidth, tileHeight) => {
     setProgress(0);
     const originalImg = await loadImage(mainImageFile);
@@ -113,6 +124,9 @@ function App() {
     const mosaicCtx = mosaicCanvas.getContext("2d", {
       willReadFrequently: true,
     });
+
+    // // Disable image smoothing for sharp edges
+    // mosaicCtx.imageSmoothingEnabled = false;
 
     let processedTiles = 0;
     const tileCanvases = await Promise.all(
@@ -148,6 +162,13 @@ function App() {
     let currentTile = 0;
     let adjacentClones = 0;
 
+    // Custom image for transparent parts
+    const customImage = new Image();
+    customImage.src = "imgs/sqr.jpeg"; // Path to your custom image
+    await new Promise((resolve) => {
+      customImage.onload = resolve;
+    });
+
     // Create the mosaic
     for (let y = 0; y < mainCanvas.height; y += tileHeight) {
       const progressPercent = 50 + Math.round((currentTile / totalTiles) * 50);
@@ -160,14 +181,20 @@ function App() {
           break;
         }
         const { data } = mainCtx.getImageData(x, y, tileWidth, tileHeight);
-        const avgColor = getAverageColor(data);
+        const avgColor = getAverageColor(data, true);
 
         // Check if the square is transparent
+        const imageData = mainCtx.getImageData(x, y, tileWidth, tileHeight);
+
         const isTransparent = [avgColor.r, avgColor.g, avgColor.b].every(
           (c) => c === 0
         );
-        if (isTransparent) {
-          //TODO Can add a custom image here
+        if (isTransparentAlphaChannel(imageData)) {
+          // TODO Can add a custom image here
+          if (!isTransparent) {
+            //   mosaicCtx.drawImage(customImage, x, y, tileWidth, tileHeight);
+            // TODO Here is my mosaic image edges, where the transparent parts are making the average darker
+          }
           continue;
         }
 
@@ -268,7 +295,7 @@ function App() {
     });
   };
 
-  const getAverageColor = (data) => {
+  const getAverageColor = (data, ignoreTransparent) => {
     let r = 0,
       g = 0,
       b = 0;
@@ -424,6 +451,26 @@ function App() {
           </FormControl>
           <TicTacToeBoard size={1 + radius * 2} />
 
+          <FormControl id="reuseCount">
+            <FormLabel>Cut from edges: {edgesCut}</FormLabel>
+            <Input
+              type="range"
+              min={1}
+              max={255}
+              value={edgesCut || 1}
+              onChange={(e) => setEdgesCut(e.target.value)}
+            />
+            <Box
+              w="200px"
+              h="200px"
+              borderColor="tomato"
+              bg="black"
+              borderStyle="solid"
+              borderWidth={`${edgesCut / 10}px`}
+              mx="auto"
+              mt={2}
+            />
+          </FormControl>
           {isLoading && <Progress value={progress} size="lg" w="100%" />}
         </VStack>
         <Flex mt={5} justify="center">
