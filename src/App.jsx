@@ -34,8 +34,9 @@ function App() {
   const [mainImage, setMainImage] = useState(null);
   const [mainImageURL, setMainImageURL] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
-  const [reuseTilesCount, setReuseTilesCount] = useState(0);
+  const [reuseTilesCount, setReuseTilesCount] = useState(1);
   const [drawnTilesState, setDrawnTiles] = useState(0);
+  const [drawInterval, setDrawnInterval] = useState(10);
   const [radius, setRadius] = useState(0);
   const [edgesCut, setEdgesCut] = useState(1);
   const [tileWidth, setTileWidth] = useState(10);
@@ -189,98 +190,127 @@ function App() {
       customImage.onload = resolve;
     });
 
-    // Create the mosaic
+    // Spiral order directions (right, down, left, up)
+    const directions = [
+      { dx: 1, dy: 0 },
+      { dx: 0, dy: 1 },
+      { dx: -1, dy: 0 },
+      { dx: 0, dy: -1 },
+    ];
+
+    const spiralOrder = [];
+
+    // Initialize the starting point at the center of the grid
+    let cx = Math.floor(totalTilesX / 2);
+    let cy = Math.floor(totalTilesY / 2);
+
+    // Generate the spiral order
+    let x = cx;
+    let y = cy;
+    let directionIndex = 0;
+    let stepSize = 1;
+    let stepsInCurrentDirection = 0;
+
+    while (spiralOrder.length < totalTiles) {
+      if (x >= 0 && x < totalTilesX && y >= 0 && y < totalTilesY) {
+        spiralOrder.push({ x, y });
+      }
+      x += directions[directionIndex].dx;
+      y += directions[directionIndex].dy;
+      stepsInCurrentDirection++;
+
+      if (stepsInCurrentDirection === stepSize) {
+        directionIndex = (directionIndex + 1) % 4;
+        stepsInCurrentDirection = 0;
+        if (directionIndex === 0 || directionIndex === 2) {
+          stepSize++;
+        }
+      }
+    }
+
+    // Create the mosaic in spiral order
+    const updateInterval = drawInterval; // Update the canvas every drawInterval cycles
     let drawnTiles = 0;
-    for (let y = 0; y < mainCanvas.height; y += tileHeight) {
+    for (const pos of spiralOrder) {
       const progressPercent = 50 + Math.round((currentTile / totalTiles) * 50);
       setProgress(() => progressPercent);
       await delay(); //! This is THE ONLY WAY to update the progress bar
-      for (let x = 0; x < mainCanvas.width; x += tileWidth) {
-        currentTile++;
-        if (availableTiles.length === 0) {
-          console.warn("Not enough unique tiles to fill the mosaic.");
-          break;
+
+      const x = pos.x * tileWidth;
+      const y = pos.y * tileHeight;
+      currentTile++;
+
+      if (availableTiles.length === 0) {
+        console.warn("Not enough unique tiles to fill the mosaic.");
+        break;
+      }
+
+      const { data } = mainCtx.getImageData(x, y, tileWidth, tileHeight);
+      const avgColor = getAverageColor(data, true);
+
+      // Check if the square is transparent
+      const imageData = mainCtx.getImageData(x, y, tileWidth, tileHeight);
+      const isTransparent = [avgColor.r, avgColor.g, avgColor.b].every(
+        (c) => c === 0
+      );
+
+      if (isTransparentAlphaChannel(imageData, edgesCut)) {
+        // TODO Can add a custom image here
+        if (!isTransparent) {
+          //   mosaicCtx.drawImage(customImage, x, y, tileWidth, tileHeight);
+          // TODO Here is my mosaic image edges, where the transparent parts are making the average darker
         }
-        const { data } = mainCtx.getImageData(x, y, tileWidth, tileHeight);
-        const avgColor = getAverageColor(data, true);
+        continue;
+      }
 
-        // Check if the square is transparent
-        const imageData = mainCtx.getImageData(x, y, tileWidth, tileHeight);
+      drawnTiles++;
+      const bestMatchIndex = findBestMatchTileIndex(avgColor, availableTiles);
+      const bestMatchTile = availableTiles[bestMatchIndex];
 
-        const isTransparent = [avgColor.r, avgColor.g, avgColor.b].every(
-          (c) => c === 0
+      const isAdjacent = (pos) => {
+        const deltaX = Math.abs(pos.x - x);
+        const deltaY = Math.abs(pos.y - y);
+        return deltaX <= radius * tileWidth && deltaY <= radius * tileHeight;
+      };
+
+      if (bestMatchTile.positions.some(isAdjacent)) {
+        // Filter available tiles to exclude adjacent ones
+        const nonAdjacentTiles = availableTiles.filter(
+          (tile) =>
+            !tile.positions.some(isAdjacent) &&
+            (tile.count < reuseTilesCount || +reuseTilesCount === 0)
         );
-        if (isTransparentAlphaChannel(imageData, edgesCut)) {
-          // TODO Can add a custom image here
-          if (!isTransparent) {
-            //   mosaicCtx.drawImage(customImage, x, y, tileWidth, tileHeight);
-            // TODO Here is my mosaic image edges, where the transparent parts are making the average darker
-          }
-          continue;
-        }
-        drawnTiles++;
-        const bestMatchIndex = findBestMatchTileIndex(avgColor, availableTiles);
-        const bestMatchTile = availableTiles[bestMatchIndex];
 
-        const isAdjacent = (pos) => {
-          const deltaX = Math.abs(pos.x - x);
-          const deltaY = Math.abs(pos.y - y);
-          return deltaX <= radius * tileWidth && deltaY <= radius * tileHeight;
-        };
+        // Find the best match tile among the non-adjacent tiles
+        const bestNonAdjacentMatchIndex = findBestMatchTileIndex(
+          avgColor,
+          nonAdjacentTiles
+        );
+        const bestNonAdjacentMatchTile =
+          nonAdjacentTiles[bestNonAdjacentMatchIndex];
 
-        if (bestMatchTile.positions.some(isAdjacent)) {
-          // Filter available tiles to exclude adjacent ones
-          const nonAdjacentTiles = availableTiles.filter(
-            (tile) =>
-              !tile.positions.some(isAdjacent) &&
-              (tile.count < reuseTilesCount || +reuseTilesCount === 0)
+        if (bestNonAdjacentMatchTile?.canvas) {
+          mosaicCtx.drawImage(
+            bestNonAdjacentMatchTile.canvas,
+            x,
+            y,
+            tileWidth,
+            tileHeight
           );
-
-          // Find the best match tile among the non-adjacent tiles
-          const bestNonAdjacentMatchIndex = findBestMatchTileIndex(
-            avgColor,
-            nonAdjacentTiles
-          );
-          const bestNonAdjacentMatchTile =
-            nonAdjacentTiles[bestNonAdjacentMatchIndex];
-
-          if (bestNonAdjacentMatchTile?.canvas) {
-            mosaicCtx.drawImage(
-              bestNonAdjacentMatchTile.canvas,
-              x,
-              y,
-              tileWidth,
-              tileHeight
+          bestNonAdjacentMatchTile.count += 1;
+          bestNonAdjacentMatchTile.positions.push({ x, y });
+          if (
+            bestNonAdjacentMatchTile.count >= reuseTilesCount &&
+            reuseTilesCount > 0
+          ) {
+            availableTiles.splice(
+              availableTiles.indexOf(bestNonAdjacentMatchTile),
+              1
             );
-            bestNonAdjacentMatchTile.count += 1;
-            bestNonAdjacentMatchTile.positions.push({ x, y });
-            if (
-              bestNonAdjacentMatchTile.count >= reuseTilesCount &&
-              reuseTilesCount > 0
-            ) {
-              availableTiles.splice(
-                availableTiles.indexOf(bestNonAdjacentMatchTile),
-                1
-              );
-            }
-          } else {
-            adjacentClones++;
-            // Fallback to drawing the best match tile if no suitable non-adjacent match found
-            mosaicCtx.drawImage(
-              bestMatchTile.canvas,
-              x,
-              y,
-              tileWidth,
-              tileHeight
-            );
-            bestMatchTile.count += 1;
-            bestMatchTile.positions.push({ x, y });
-            //  && reuseTilesCount > 0 means that in case of 0 it is infinite
-            if (bestMatchTile.count >= reuseTilesCount && reuseTilesCount > 0) {
-              availableTiles.splice(bestMatchIndex, 1);
-            }
           }
         } else {
+          adjacentClones++;
+          // Fallback to drawing the best match tile if no suitable non-adjacent match found
           mosaicCtx.drawImage(
             bestMatchTile.canvas,
             x,
@@ -295,8 +325,27 @@ function App() {
             availableTiles.splice(bestMatchIndex, 1);
           }
         }
+      } else {
+        mosaicCtx.drawImage(bestMatchTile.canvas, x, y, tileWidth, tileHeight);
+        bestMatchTile.count += 1;
+        bestMatchTile.positions.push({ x, y });
+        //  && reuseTilesCount > 0 means that in case of 0 it is infinite
+        if (bestMatchTile.count >= reuseTilesCount && reuseTilesCount > 0) {
+          availableTiles.splice(bestMatchIndex, 1);
+        }
+      }
+
+      // Update the mosaic canvas every `updateInterval` cycles
+      if (currentTile % updateInterval === 0) {
+        // Draw the current state of the mosaic canvas to the screen
+        const previewCanvas = document.getElementById("previewCanvas");
+        const previewCtx = previewCanvas.getContext("2d");
+        previewCanvas.width = mosaicCanvas.width;
+        previewCanvas.height = mosaicCanvas.height;
+        previewCtx.drawImage(mosaicCanvas, 0, 0);
       }
     }
+
     setDrawnTiles(drawnTiles);
 
     if (adjacentClones > 0) {
@@ -308,6 +357,13 @@ function App() {
         isClosable: true,
       });
     }
+
+    // Final draw of the completed mosaic
+    const previewCanvas = document.getElementById("previewCanvas");
+    const previewCtx = previewCanvas.getContext("2d");
+    previewCanvas.width = mosaicCanvas.width;
+    previewCanvas.height = mosaicCanvas.height;
+    previewCtx.drawImage(mosaicCanvas, 0, 0);
 
     return new Promise((resolve) => {
       mosaicCanvas.toBlob((blob) => {
@@ -440,7 +496,19 @@ function App() {
               onChange={(e) => setReuseTilesCount(e.target.value)}
             />
           </FormControl>
-          <FormControl id="reuseCount">
+          <FormControl id="drawAnimation">
+            <FormLabel>
+              Draw animation: {drawInterval > 0 ? drawInterval : "None"}
+            </FormLabel>
+            <Input
+              type="range"
+              min={0}
+              max={100}
+              value={drawInterval || 0}
+              onChange={(e) => setDrawnInterval(e.target.value)}
+            />
+          </FormControl>
+          <FormControl id="adjacentBlockingRadius">
             <FormLabel>Adjacent blocking radius: {radius}</FormLabel>
             <Input
               type="range"
@@ -451,7 +519,7 @@ function App() {
             />
           </FormControl>
           <TicTacToeBoard size={1 + radius * 2} />
-          <FormControl id="reuseCount">
+          <FormControl id="cutFromEdges">
             <FormLabel>Cut from edges: {edgesCut}</FormLabel>
             <Input
               type="range"
@@ -477,16 +545,17 @@ function App() {
           {mainImageURL && (
             <ChakraImage w="1000px" src={mainImageURL} alt="Main" mx={2} />
           )}
-          {mosaicImage && (
-            <Box
-              border="1px solid"
-              borderColor="gray.300"
-              borderRadius="md"
-              mx={2}
-            >
-              <ChakraImage w="1000px" src={mosaicImage} alt="Mosaic" />
-            </Box>
-          )}
+          {/* {mosaicImage && ( */}
+          <Box
+            border="1px solid"
+            borderColor="gray.300"
+            borderRadius="md"
+            mx={2}
+          >
+            {/* <ChakraImage w="1000px" src={mosaicImage} alt="Mosaic" /> */}
+            <canvas id="previewCanvas"></canvas>
+          </Box>
+          {/* )} */}
         </Flex>
       </Box>
     </ChakraProvider>
