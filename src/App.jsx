@@ -41,13 +41,18 @@ function App() {
   const [edgesCut, setEdgesCut] = useState(1);
   const [tileWidth, setTileWidth] = useState(10);
   const [tileHeight, setTileHeight] = useState(10);
-  const [mosaicImage, setMosaicImage] = useState(null);
   const [tiles, setTiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const toast = useToast();
 
   useEffect(() => {
+    const loadTiles = async () => {
+      const tileImages = await Promise.all(
+        imageFiles.map((file) => loadImage(file))
+      );
+      setTiles(tileImages);
+    };
     if (imageFiles.length > 0) {
       loadTiles();
     }
@@ -61,13 +66,6 @@ function App() {
 
   const handleTileImagesChange = (e) => {
     setImageFiles(Array.from(e.target.files));
-  };
-
-  const loadTiles = async () => {
-    const tileImages = await Promise.all(
-      imageFiles.map((file) => loadImage(file))
-    );
-    setTiles(tileImages);
   };
 
   const handleSubmit = async (e) => {
@@ -85,13 +83,7 @@ function App() {
 
     setIsLoading(true);
 
-    const mosaic = await createMosaic(
-      mainImage,
-      tiles,
-      +tileWidth,
-      +tileHeight
-    );
-    setMosaicImage(mosaic);
+    await createMosaic(mainImage, tiles, +tileWidth, +tileHeight);
     setIsLoading(false);
   };
 
