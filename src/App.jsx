@@ -229,32 +229,43 @@ function App() {
         };
 
         if (bestMatchTile.positions.some(isAdjacent)) {
-          // Find another tile if this one is adjacent
-          const nonAdjacentTile = availableTiles.find(
+          // Filter available tiles to exclude adjacent ones
+          const nonAdjacentTiles = availableTiles.filter(
             (tile) =>
               !tile.positions.some(isAdjacent) &&
               (tile.count < reuseTilesCount || +reuseTilesCount === 0)
           );
 
-          if (nonAdjacentTile?.canvas) {
+          // Find the best match tile among the non-adjacent tiles
+          const bestNonAdjacentMatchIndex = findBestMatchTileIndex(
+            avgColor,
+            nonAdjacentTiles
+          );
+          const bestNonAdjacentMatchTile =
+            nonAdjacentTiles[bestNonAdjacentMatchIndex];
+
+          if (bestNonAdjacentMatchTile?.canvas) {
             mosaicCtx.drawImage(
-              nonAdjacentTile.canvas,
+              bestNonAdjacentMatchTile.canvas,
               x,
               y,
               tileWidth,
               tileHeight
             );
-            nonAdjacentTile.count += 1;
-            nonAdjacentTile.positions.push({ x, y });
+            bestNonAdjacentMatchTile.count += 1;
+            bestNonAdjacentMatchTile.positions.push({ x, y });
             if (
-              nonAdjacentTile.count >= reuseTilesCount &&
+              bestNonAdjacentMatchTile.count >= reuseTilesCount &&
               reuseTilesCount > 0
             ) {
-              availableTiles.splice(availableTiles.indexOf(nonAdjacentTile), 1);
+              availableTiles.splice(
+                availableTiles.indexOf(bestNonAdjacentMatchTile),
+                1
+              );
             }
           } else {
             adjacentClones++;
-
+            // Fallback to drawing the best match tile if no suitable non-adjacent match found
             mosaicCtx.drawImage(
               bestMatchTile.canvas,
               x,
@@ -264,6 +275,7 @@ function App() {
             );
             bestMatchTile.count += 1;
             bestMatchTile.positions.push({ x, y });
+            //  && reuseTilesCount > 0 means that in case of 0 it is infinite
             if (bestMatchTile.count >= reuseTilesCount && reuseTilesCount > 0) {
               availableTiles.splice(bestMatchIndex, 1);
             }
@@ -278,6 +290,7 @@ function App() {
           );
           bestMatchTile.count += 1;
           bestMatchTile.positions.push({ x, y });
+          //  && reuseTilesCount > 0 means that in case of 0 it is infinite
           if (bestMatchTile.count >= reuseTilesCount && reuseTilesCount > 0) {
             availableTiles.splice(bestMatchIndex, 1);
           }
