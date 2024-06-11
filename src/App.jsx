@@ -23,8 +23,10 @@ import pica from "pica";
 
 import TicTacToeBoard from "./components/TicTacToeBoard";
 import {
+  createColorChart,
   findBestMatchTileIndex,
   getAverageColor,
+  groupColors,
   isTransparentAlphaChannel,
   loadImage,
 } from "./utils/imageUtils";
@@ -36,11 +38,11 @@ function App() {
   const [imageFiles, setImageFiles] = useState([]);
   const [reuseTilesCount, setReuseTilesCount] = useState(1);
   const [drawnTilesState, setDrawnTiles] = useState(0);
-  const [drawInterval, setDrawnInterval] = useState(10);
+  const [drawInterval, setDrawnInterval] = useState(30);
   const [radius, setRadius] = useState(0);
   const [edgesCut, setEdgesCut] = useState(1);
-  const [tileWidth, setTileWidth] = useState(10);
-  const [tileHeight, setTileHeight] = useState(10);
+  const [tileWidth, setTileWidth] = useState(25);
+  const [tileHeight, setTileHeight] = useState(25);
   const [tiles, setTiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -223,6 +225,9 @@ function App() {
     // Create the mosaic in spiral order
     const updateInterval = drawInterval; // Update the canvas every drawInterval cycles
     let drawnTiles = 0;
+    const mainImageColors = [];
+    const tileUsage = {};
+
     for (const pos of spiralOrder) {
       const progressPercent = 50 + Math.round((currentTile / totalTiles) * 50);
       setProgress(() => progressPercent);
@@ -239,6 +244,7 @@ function App() {
 
       const { data } = mainCtx.getImageData(x, y, tileWidth, tileHeight);
       const avgColor = getAverageColor(data, true);
+      mainImageColors.push(avgColor);
 
       // Check if the square is transparent
       const imageData = mainCtx.getImageData(x, y, tileWidth, tileHeight);
@@ -291,6 +297,10 @@ function App() {
           );
           bestNonAdjacentMatchTile.count += 1;
           bestNonAdjacentMatchTile.positions.push({ x, y });
+
+          const colorKey = JSON.stringify(bestNonAdjacentMatchTile.color);
+          tileUsage[colorKey] = (tileUsage[colorKey] || 0) + 1;
+
           if (
             bestNonAdjacentMatchTile.count >= reuseTilesCount &&
             reuseTilesCount > 0
@@ -313,6 +323,10 @@ function App() {
           bestMatchTile.count += 1;
           bestMatchTile.positions.push({ x, y });
           //  && reuseTilesCount > 0 means that in case of 0 it is infinite
+
+          const colorKey = JSON.stringify(bestMatchTile.color);
+          tileUsage[colorKey] = (tileUsage[colorKey] || 0) + 1;
+
           if (bestMatchTile.count >= reuseTilesCount && reuseTilesCount > 0) {
             availableTiles.splice(bestMatchIndex, 1);
           }
@@ -322,6 +336,10 @@ function App() {
         bestMatchTile.count += 1;
         bestMatchTile.positions.push({ x, y });
         //  && reuseTilesCount > 0 means that in case of 0 it is infinite
+
+        const colorKey = JSON.stringify(bestMatchTile.color);
+        tileUsage[colorKey] = (tileUsage[colorKey] || 0) + 1;
+
         if (bestMatchTile.count >= reuseTilesCount && reuseTilesCount > 0) {
           availableTiles.splice(bestMatchIndex, 1);
         }
@@ -356,6 +374,18 @@ function App() {
     previewCanvas.width = mosaicCanvas.width;
     previewCanvas.height = mosaicCanvas.height;
     previewCtx.drawImage(mosaicCanvas, 0, 0);
+
+    // Create and display statistics
+    const mainImageColorStats = groupColors(mainImageColors);
+    const tileUsageStats = groupColors(
+      Object.keys(tileUsage).map((key) => JSON.parse(key))
+    );
+
+    console.log("Most wanted colors in the main image:", mainImageColorStats);
+    console.log("Tile usage statistics:", tileUsageStats);
+
+    // Call these functions with the statistics generated above
+    createColorChart(mainImageColorStats, "colorChart");
 
     return new Promise((resolve) => {
       mosaicCanvas.toBlob((blob) => {
@@ -533,21 +563,19 @@ function App() {
           </FormControl>
           {isLoading && <Progress value={progress} size="lg" w="100%" />}
         </VStack>
-        <Flex mt={5} justify="center">
+        <Flex mt={5} justify="center" flexWrap="wrap">
           {mainImageURL && (
             <ChakraImage w="1000px" src={mainImageURL} alt="Main" mx={2} />
           )}
-          {/* {mosaicImage && ( */}
           <Box
             border="1px solid"
             borderColor="gray.300"
             borderRadius="md"
             mx={2}
           >
-            {/* <ChakraImage w="1000px" src={mosaicImage} alt="Mosaic" /> */}
             <canvas id="previewCanvas"></canvas>
           </Box>
-          {/* )} */}
+          <canvas id="colorChart"></canvas>
         </Flex>
       </Box>
     </ChakraProvider>

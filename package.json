@@ -10,6 +10,7 @@
     "@testing-library/react": "^13.0.0",
     "@testing-library/user-event": "^13.2.1",
     "axios": "^1.7.2",
+    "chart.js": "^4.4.3",
     "color-diff": "^1.4.0",
     "colorthief": "^2.4.0",
     "framer-motion": "^11.2.10",
