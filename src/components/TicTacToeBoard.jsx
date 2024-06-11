@@ -16,19 +16,20 @@ export default function TicTacToeBoard({ size }) {
   const board = createBoard(size);
 
   return (
-    <Table borderWidth="1px" borderColor="black" w="auto">
+    <Table borderWidth="0.5px" borderColor="black" w="auto">
       <Tbody>
         {board.map((row, rowIndex) => (
           <Tr key={rowIndex}>
             {row.map((cell, colIndex) => (
               <Td
                 key={colIndex}
-                borderWidth="1px"
+                borderWidth="0.5px"
                 borderColor="black"
                 p={0}
-                w="50px"
-                h="50px"
+                w="25px"
+                h="25px"
                 textAlign="center"
+                fontSize="10px"
               >
                 {cell}
               </Td>

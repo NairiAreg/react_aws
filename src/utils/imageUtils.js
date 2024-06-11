@@ -123,3 +123,55 @@ export const createColorChart = (stats, id) => {
     },
   });
 };
+
+// Utility function to blend two colors
+export const blendColors = (color1, color2, factor) => {
+  const r = Math.round(color1.r + factor * (color2.r - color1.r));
+  const g = Math.round(color1.g + factor * (color2.g - color1.g));
+  const b = Math.round(color1.b + factor * (color2.b - color1.b));
+  return { r, g, b };
+};
+
+// Helper function to correct and draw a tile
+export const correctAndDrawTile = (
+  tile,
+  avgColor,
+  x,
+  y,
+  mosaicCtx,
+  tileWidth,
+  tileHeight,
+  correctionFactor
+) => {
+  const correctedColor = blendColors(tile.color, avgColor, correctionFactor);
+
+  // Create a temporary canvas to apply color correction
+  const tempCanvas = document.createElement("canvas");
+  tempCanvas.width = tileWidth;
+  tempCanvas.height = tileHeight;
+  const tempCtx = tempCanvas.getContext("2d");
+
+  // Draw the original tile on the temporary canvas
+  tempCtx.drawImage(tile.canvas, 0, 0, tileWidth, tileHeight);
+
+  // Apply color correction
+  const imageData = tempCtx.getImageData(0, 0, tileWidth, tileHeight);
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    imageData.data[i] = Math.min(
+      255,
+      imageData.data[i] + (correctedColor.r - tile.color.r)
+    );
+    imageData.data[i + 1] = Math.min(
+      255,
+      imageData.data[i + 1] + (correctedColor.g - tile.color.g)
+    );
+    imageData.data[i + 2] = Math.min(
+      255,
+      imageData.data[i + 2] + (correctedColor.b - tile.color.b)
+    );
+  }
+  tempCtx.putImageData(imageData, 0, 0);
+
+  // Draw the corrected tile on the mosaic canvas
+  mosaicCtx.drawImage(tempCanvas, x, y, tileWidth, tileHeight);
+};

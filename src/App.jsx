@@ -23,6 +23,7 @@ import pica from "pica";
 
 import TicTacToeBoard from "./components/TicTacToeBoard";
 import {
+  correctAndDrawTile,
   createColorChart,
   findBestMatchTileIndex,
   getAverageColor,
@@ -31,6 +32,7 @@ import {
   loadImage,
 } from "./utils/imageUtils";
 import SquareInfo from "./components/SquareInfo";
+import CustomSlider from "./components/CustomSlider";
 
 function App() {
   const [mainImage, setMainImage] = useState(null);
@@ -38,7 +40,7 @@ function App() {
   const [imageFiles, setImageFiles] = useState([]);
   const [reuseTilesCount, setReuseTilesCount] = useState(1);
   const [drawnTilesState, setDrawnTiles] = useState(0);
-  const [drawInterval, setDrawnInterval] = useState(30);
+  const [drawInterval, setDrawInterval] = useState(30);
   const [radius, setRadius] = useState(0);
   const [edgesCut, setEdgesCut] = useState(1);
   const [tileWidth, setTileWidth] = useState(25);
@@ -46,6 +48,8 @@ function App() {
   const [tiles, setTiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [colorCorrection, setColorCorrection] = useState(0);
+
   const toast = useToast();
 
   useEffect(() => {
@@ -271,6 +275,7 @@ function App() {
         return deltaX <= radius * tileWidth && deltaY <= radius * tileHeight;
       };
 
+      // Parameters for color correction
       if (bestMatchTile.positions.some(isAdjacent)) {
         // Filter available tiles to exclude adjacent ones
         const nonAdjacentTiles = availableTiles.filter(
@@ -288,12 +293,15 @@ function App() {
           nonAdjacentTiles[bestNonAdjacentMatchIndex];
 
         if (bestNonAdjacentMatchTile?.canvas) {
-          mosaicCtx.drawImage(
-            bestNonAdjacentMatchTile.canvas,
+          correctAndDrawTile(
+            bestNonAdjacentMatchTile,
+            avgColor,
             x,
             y,
+            mosaicCtx,
             tileWidth,
-            tileHeight
+            tileHeight,
+            +colorCorrection
           );
           bestNonAdjacentMatchTile.count += 1;
           bestNonAdjacentMatchTile.positions.push({ x, y });
@@ -313,16 +321,18 @@ function App() {
         } else {
           adjacentClones++;
           // Fallback to drawing the best match tile if no suitable non-adjacent match found
-          mosaicCtx.drawImage(
-            bestMatchTile.canvas,
+          correctAndDrawTile(
+            bestMatchTile,
+            avgColor,
             x,
             y,
+            mosaicCtx,
             tileWidth,
-            tileHeight
+            tileHeight,
+            +colorCorrection
           );
           bestMatchTile.count += 1;
           bestMatchTile.positions.push({ x, y });
-          //  && reuseTilesCount > 0 means that in case of 0 it is infinite
 
           const colorKey = JSON.stringify(bestMatchTile.color);
           tileUsage[colorKey] = (tileUsage[colorKey] || 0) + 1;
@@ -332,10 +342,18 @@ function App() {
           }
         }
       } else {
-        mosaicCtx.drawImage(bestMatchTile.canvas, x, y, tileWidth, tileHeight);
+        correctAndDrawTile(
+          bestMatchTile,
+          avgColor,
+          x,
+          y,
+          mosaicCtx,
+          tileWidth,
+          tileHeight,
+          +colorCorrection
+        );
         bestMatchTile.count += 1;
         bestMatchTile.positions.push({ x, y });
-        //  && reuseTilesCount > 0 means that in case of 0 it is infinite
 
         const colorKey = JSON.stringify(bestMatchTile.color);
         tileUsage[colorKey] = (tileUsage[colorKey] || 0) + 1;
@@ -510,45 +528,46 @@ function App() {
             <FormLabel>
               Reuse Count: {reuseTilesCount > 0 ? reuseTilesCount : "Infinity"}
             </FormLabel>
-            <Input
-              type="range"
-              min={0}
+            <CustomSlider
               max={100}
-              value={reuseTilesCount || 0}
-              onChange={(e) => setReuseTilesCount(e.target.value)}
+              value={reuseTilesCount}
+              onChange={(value) => setReuseTilesCount(value)}
+              thumbColor="teal.500"
             />
           </FormControl>
+
           <FormControl id="drawAnimation">
             <FormLabel>
               Draw animation: {drawInterval > 0 ? drawInterval : "None"}
             </FormLabel>
-            <Input
-              type="range"
-              min={0}
+            <CustomSlider
               max={100}
-              value={drawInterval || 0}
-              onChange={(e) => setDrawnInterval(e.target.value)}
+              value={drawInterval}
+              onChange={(value) => setDrawInterval(value)}
+              thumbColor="blue.500"
             />
           </FormControl>
+
           <FormControl id="adjacentBlockingRadius">
             <FormLabel>Adjacent blocking radius: {radius}</FormLabel>
-            <Input
-              type="range"
-              min={0}
-              max={5}
-              value={radius || 0}
-              onChange={(e) => setRadius(e.target.value)}
+            <CustomSlider
+              max={10}
+              value={radius}
+              onChange={(value) => setRadius(value)}
+              thumbColor="red.500"
             />
           </FormControl>
+
           <TicTacToeBoard size={1 + radius * 2} />
+
           <FormControl id="cutFromEdges">
             <FormLabel>Cut from edges: {edgesCut}</FormLabel>
-            <Input
-              type="range"
+            <CustomSlider
               min={1}
               max={255}
-              value={edgesCut || 1}
-              onChange={(e) => setEdgesCut(e.target.value)}
+              value={edgesCut}
+              onChange={(value) => setEdgesCut(value)}
+              thumbColor="yellow.500"
             />
             <Box
               w="200px"
@@ -559,6 +578,16 @@ function App() {
               borderWidth={`${edgesCut / 10}px`}
               mx="auto"
               mt={2}
+            />
+          </FormControl>
+          <FormControl id="colorCorrection">
+            <FormLabel>Color correction: {colorCorrection * 100}%</FormLabel>
+            <CustomSlider
+              step={0.1}
+              max={1}
+              value={colorCorrection}
+              onChange={(value) => setColorCorrection(value)}
+              thumbColor="teal.500"
             />
           </FormControl>
           {isLoading && <Progress value={progress} size="lg" w="100%" />}
