@@ -3,11 +3,18 @@ import MosaicGeneration from "./MosaicGeneration";
 
 const routes = [
   {
+    path: "/",
     Component: MosaicGeneration,
     Layout: DefaultLayout,
     secured: false,
     exact: true,
-    path: "/",
+  },
+  {
+    path: "/lod",
+    Component: MosaicGeneration,
+    Layout: DefaultLayout,
+    secured: false,
+    exact: true,
   },
 ];
 

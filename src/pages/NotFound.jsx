@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Flex, Heading, Img } from "@chakra-ui/react";
+import { Box, Flex, Heading } from "@chakra-ui/react";
 
 const NotFound = () => {
   return (
@@ -10,7 +10,6 @@ const NotFound = () => {
         left="15%"
         position="absolute"
         bg="orange.400"
-        borderRadius="100%"
         height="103px"
         width="103px"
       />
@@ -21,7 +20,6 @@ const NotFound = () => {
         position="absolute"
         opacity="0.5"
         bg="blue.400"
-        borderRadius="100%"
         height="60px"
         width="60px"
       />
@@ -31,7 +29,6 @@ const NotFound = () => {
         right="10%"
         position="absolute"
         bg="blue.400"
-        borderRadius="100%"
         height="103px"
         width="103px"
       />
@@ -42,7 +39,6 @@ const NotFound = () => {
         opacity="0.1"
         position="absolute"
         bg="blue.400"
-        borderRadius="100%"
         height="204px"
         width="204px"
       />
@@ -64,27 +60,11 @@ const NotFound = () => {
           mb="5"
           as="h2"
         >
-          Not found
+          Not found{" "}
           <Box fontWeight="light" as="span">
             404
           </Box>
         </Heading>
-        <Box
-          textAlign="center"
-          mb="12"
-          as="span"
-          fontSize={{ base: "3xl", sm: "4xl" }}
-          alignItems="center"
-          justify="center"
-        >
-          ok
-        </Box>
-        <Img
-          alignSelf="flex-end"
-          height="380px"
-          width="376px"
-          src="/assets/images/img_404.png"
-        />
       </Flex>
     </Flex>
   );
