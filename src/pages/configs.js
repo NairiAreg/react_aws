@@ -1,5 +1,6 @@
 import DefaultLayout from "../containers/DefaultLayout";
 import MosaicGeneration from "./MosaicGeneration";
+import MosaicGenerationLOD from "./LOD";
 
 const routes = [
   {
@@ -11,7 +12,7 @@ const routes = [
   },
   {
     path: "/lod",
-    Component: MosaicGeneration,
+    Component: MosaicGenerationLOD,
     Layout: DefaultLayout,
     secured: false,
     exact: true,

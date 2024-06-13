@@ -21,7 +21,7 @@ import {
 import { FaFileUpload } from "react-icons/fa";
 import pica from "pica";
 
-import TicTacToeBoard from "../../components/TicTacToeBoard";
+import TicTacToeBoard from "components/TicTacToeBoard";
 import {
   correctAndDrawTile,
   createColorChart,
@@ -30,9 +30,10 @@ import {
   groupColors,
   isTransparentAlphaChannel,
   loadImage,
-} from "../../utils/imageUtils";
-import SquareInfo from "../../components/SquareInfo";
-import CustomSlider from "../../components/CustomSlider";
+} from "utils/imageUtils";
+import SquareInfo from "components/SquareInfo";
+import CustomSlider from "components/CustomSlider";
+import { Link } from "react-router-dom";
 
 function MosaicGeneration() {
   const [mainImage, setMainImage] = useState(null);
@@ -418,6 +419,7 @@ function MosaicGeneration() {
       <Box p={5}>
         <VStack spacing={5} maxW="600px" mx="auto">
           <Heading>Mosaic Image Generator</Heading>
+          <Link to="/lod">LOD</Link>
           <FormControl id="mainImage">
             <FormLabel>Main Image</FormLabel>
             <Box

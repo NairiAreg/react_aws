@@ -17,11 +17,13 @@ import {
   IconButton,
   Alert,
   AlertIcon,
+  Grid,
+  GridItem,
 } from "@chakra-ui/react";
 import { FaFileUpload } from "react-icons/fa";
 import pica from "pica";
 
-import TicTacToeBoard from "../../components/TicTacToeBoard";
+import TicTacToeBoard from "components/TicTacToeBoard";
 import {
   correctAndDrawTile,
   createColorChart,
@@ -30,11 +32,13 @@ import {
   groupColors,
   isTransparentAlphaChannel,
   loadImage,
-} from "../../utils/imageUtils";
-import SquareInfo from "../../components/SquareInfo";
-import CustomSlider from "../../components/CustomSlider";
+} from "utils/imageUtils";
+import SquareInfo from "components/SquareInfo";
+import CustomSlider from "components/CustomSlider";
+import { Link } from "react-router-dom";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
-function MosaicGeneration() {
+function LOD() {
   const [mainImage, setMainImage] = useState(null);
   const [mainImageURL, setMainImageURL] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
@@ -43,12 +47,14 @@ function MosaicGeneration() {
   const [drawInterval, setDrawInterval] = useState(30);
   const [radius, setRadius] = useState(0);
   const [edgesCut, setEdgesCut] = useState(1);
-  const [tileWidth, setTileWidth] = useState(25);
-  const [tileHeight, setTileHeight] = useState(25);
+  const [tileWidth, setTileWidth] = useState(72);
+  const [tileHeight, setTileHeight] = useState(72);
+  const [imageWidth, setImageWidth] = useState(2880);
   const [tiles, setTiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [colorCorrection, setColorCorrection] = useState(0);
+  const [gridState, setGridState] = useState([]);
 
   const toast = useToast();
 
@@ -123,7 +129,7 @@ function MosaicGeneration() {
 
     const aspectRatio = originalImg.height / originalImg.width;
     // resizedCanvas.width = originalImg.width;
-    resizedCanvas.width = 1000;
+    resizedCanvas.width = imageWidth;
     resizedCanvas.height = Math.round(resizedCanvas.width * aspectRatio);
 
     // Use pica to resize the main image
@@ -231,6 +237,7 @@ function MosaicGeneration() {
     let drawnTiles = 0;
     const mainImageColors = [];
     const tileUsage = {};
+    const grid = [];
 
     for (const pos of spiralOrder) {
       const progressPercent = 50 + Math.round((currentTile / totalTiles) * 50);
@@ -293,6 +300,11 @@ function MosaicGeneration() {
           nonAdjacentTiles[bestNonAdjacentMatchIndex];
 
         if (bestNonAdjacentMatchTile?.canvas) {
+          if (!grid?.[pos.x]) {
+            grid[pos.x] = [];
+          }
+          grid[pos.y][pos.x] = bestNonAdjacentMatchTile.canvas;
+
           correctAndDrawTile(
             bestNonAdjacentMatchTile,
             avgColor,
@@ -321,6 +333,11 @@ function MosaicGeneration() {
         } else {
           adjacentClones++;
           // Fallback to drawing the best match tile if no suitable non-adjacent match found
+          if (!grid?.[pos.x]) {
+            grid[pos.x] = [];
+          }
+          grid[pos.y][pos.x] = bestMatchTile.canvas;
+
           correctAndDrawTile(
             bestMatchTile,
             avgColor,
@@ -342,6 +359,11 @@ function MosaicGeneration() {
           }
         }
       } else {
+        if (!grid?.[pos.x]) {
+          grid[pos.x] = [];
+        }
+        grid[pos.y][pos.x] = bestMatchTile.canvas;
+
         correctAndDrawTile(
           bestMatchTile,
           avgColor,
@@ -373,6 +395,7 @@ function MosaicGeneration() {
         previewCtx.drawImage(mosaicCanvas, 0, 0);
       }
     }
+    setGridState(grid);
 
     setDrawnTiles(drawnTiles);
 
@@ -395,14 +418,16 @@ function MosaicGeneration() {
 
     // Create and display statistics
     const mainImageColorStats = groupColors(mainImageColors);
-    const tileUsageStats = groupColors(
-      Object.keys(tileUsage).map((key) => JSON.parse(key))
-    );
+    //? tile usage info
+    // const tileUsageStats = groupColors(
+    //   Object.keys(tileUsage).map((key) => JSON.parse(key))
+    // );
 
-    console.log("Most wanted colors in the main image:", mainImageColorStats);
-    console.log("Tile usage statistics:", tileUsageStats);
+    // console.log("Most wanted colors in the main image:", mainImageColorStats);
+    // console.log("Tile usage statistics:", tileUsageStats);
 
     // Call these functions with the statistics generated above
+    //? tile usage info
     createColorChart(mainImageColorStats, "colorChart");
 
     return new Promise((resolve) => {
@@ -418,6 +443,7 @@ function MosaicGeneration() {
       <Box p={5}>
         <VStack spacing={5} maxW="600px" mx="auto">
           <Heading>Mosaic Image Generator</Heading>
+          <Link to="/lod">Classic</Link>
           <FormControl id="mainImage">
             <FormLabel>Main Image</FormLabel>
             <Box
@@ -509,8 +535,20 @@ function MosaicGeneration() {
                 onChange={(e) => setTileHeight(e.target.value)}
               />
             </FormControl>
+            <FormControl id="tileHeight">
+              <FormLabel>Image width</FormLabel>
+              <Input
+                type="number"
+                value={imageWidth}
+                onChange={(e) => setImageWidth(e.target.value)}
+              />
+            </FormControl>
           </HStack>
-          <SquareInfo width={tileWidth} height={tileHeight} />
+          <SquareInfo
+            width={tileWidth}
+            height={tileHeight}
+            imageWidth={imageWidth}
+          />
           {drawnTilesState > 0 && (
             <Alert status="success">
               <AlertIcon />
@@ -606,9 +644,65 @@ function MosaicGeneration() {
           </Box>
           <canvas id="colorChart"></canvas>
         </Flex>
+        <TransformWrapper
+          defaultScale={1}
+          defaultPositionX={0}
+          minScale={0.5}
+          defaultPositionY={0}
+          wheel={{ step: 0.2 }}
+        >
+          {({ zoomIn, zoomOut, resetTransform, centerView }) => (
+            <div style={{ width: "100%", height: "100%" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  marginBottom: "10px",
+                }}
+              >
+                <Button onClick={() => zoomIn()} marginRight="5px">
+                  Zoom In
+                </Button>
+                <Button onClick={() => zoomOut()} marginRight="5px">
+                  Zoom Out
+                </Button>
+                <Button onClick={() => resetTransform()} marginRight="5px">
+                  Reset
+                </Button>
+                <Button onClick={() => centerView()}>Center</Button>
+              </div>
+              <TransformComponent
+                wrapperStyle={{
+                  width: "1000px",
+                  maxWidth: "100%",
+                  border: "1px solid",
+                }}
+              >
+                <Grid
+                  w="fit-content"
+                  templateColumns={`repeat(${
+                    gridState?.[0]?.length || 0
+                  }, 1fr)`}
+                  gap={0}
+                >
+                  {gridState.map((row, x) =>
+                    row.map((tile, y) => (
+                      <GridItem
+                        key={`${x}-${y}`}
+                        onClick={() => console.log(x, y)}
+                      >
+                        <img src={tile.toDataURL()} alt="img" />
+                      </GridItem>
+                    ))
+                  )}
+                </Grid>
+              </TransformComponent>
+            </div>
+          )}
+        </TransformWrapper>
       </Box>
     </ChakraProvider>
   );
 }
 
-export default MosaicGeneration;
+export default LOD;

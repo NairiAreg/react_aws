@@ -1,8 +1,8 @@
 import { Text, Alert, AlertIcon } from "@chakra-ui/react";
 
-const SquareInfo = ({ width, height }) => {
+const SquareInfo = ({ width, height, imageWidth = 1000 }) => {
   const calculateTilesCount = () => {
-    const area = 1000 * 1000;
+    const area = imageWidth * imageWidth;
     const squareArea = width * height;
     return Math.floor(area / squareArea);
   };
@@ -14,7 +14,7 @@ const SquareInfo = ({ width, height }) => {
       <AlertIcon />
       <Text>
         For {width}x{height} squares: <b>{tilesCount} tiles</b> are needed to
-        fill a 1000x1000 area.
+        fill a {imageWidth}x{imageWidth} area.
       </Text>
     </Alert>
   );
