@@ -616,8 +616,6 @@ function MosaicGeneration() {
           )}
           <TransformWrapper
             defaultScale={0.3}
-            // defaultPositionX={0}
-            // defaultPositionY={0}
             minScale={0.3}
             initialScale={0.3}
             wheel={{ step: 0.2 }}
@@ -625,7 +623,7 @@ function MosaicGeneration() {
             centerZoomedOut={true}
           >
             {({ zoomIn, zoomOut, resetTransform, centerView }) => (
-              <div style={{ width: "100%", height: "100%" }}>
+              <Flex direction="column">
                 <div
                   style={{
                     display: "flex",
@@ -654,7 +652,7 @@ function MosaicGeneration() {
                 >
                   <canvas id="previewCanvas"></canvas>
                 </TransformComponent>
-              </div>
+              </Flex>
             )}
           </TransformWrapper>
           <canvas id="colorChart"></canvas>
