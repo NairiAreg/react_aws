@@ -34,6 +34,7 @@ import {
 import SquareInfo from "components/SquareInfo";
 import CustomSlider from "components/CustomSlider";
 import { Link } from "react-router-dom";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 function MosaicGeneration() {
   const [mainImage, setMainImage] = useState(null);
@@ -44,8 +45,9 @@ function MosaicGeneration() {
   const [drawInterval, setDrawInterval] = useState(30);
   const [radius, setRadius] = useState(0);
   const [edgesCut, setEdgesCut] = useState(1);
-  const [tileWidth, setTileWidth] = useState(25);
-  const [tileHeight, setTileHeight] = useState(25);
+  const [tileWidth, setTileWidth] = useState(72);
+  const [tileHeight, setTileHeight] = useState(72);
+  const [imageWidth, setImageWidth] = useState(2880);
   const [tiles, setTiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -124,7 +126,7 @@ function MosaicGeneration() {
 
     const aspectRatio = originalImg.height / originalImg.width;
     // resizedCanvas.width = originalImg.width;
-    resizedCanvas.width = 1000;
+    resizedCanvas.width = imageWidth;
     resizedCanvas.height = Math.round(resizedCanvas.width * aspectRatio);
 
     // Use pica to resize the main image
@@ -396,14 +398,16 @@ function MosaicGeneration() {
 
     // Create and display statistics
     const mainImageColorStats = groupColors(mainImageColors);
-    const tileUsageStats = groupColors(
-      Object.keys(tileUsage).map((key) => JSON.parse(key))
-    );
+    //? tile usage info
+    // const tileUsageStats = groupColors(
+    //   Object.keys(tileUsage).map((key) => JSON.parse(key))
+    // );
 
-    console.log("Most wanted colors in the main image:", mainImageColorStats);
-    console.log("Tile usage statistics:", tileUsageStats);
+    // console.log("Most wanted colors in the main image:", mainImageColorStats);
+    // console.log("Tile usage statistics:", tileUsageStats);
 
     // Call these functions with the statistics generated above
+    //? tile usage info
     createColorChart(mainImageColorStats, "colorChart");
 
     return new Promise((resolve) => {
@@ -511,8 +515,20 @@ function MosaicGeneration() {
                 onChange={(e) => setTileHeight(e.target.value)}
               />
             </FormControl>
+            <FormControl id="tileHeight">
+              <FormLabel>Image width</FormLabel>
+              <Input
+                type="number"
+                value={imageWidth}
+                onChange={(e) => setImageWidth(e.target.value)}
+              />
+            </FormControl>
           </HStack>
-          <SquareInfo width={tileWidth} height={tileHeight} />
+          <SquareInfo
+            width={tileWidth}
+            height={tileHeight}
+            imageWidth={imageWidth}
+          />
           {drawnTilesState > 0 && (
             <Alert status="success">
               <AlertIcon />
@@ -598,14 +614,49 @@ function MosaicGeneration() {
           {mainImageURL && (
             <ChakraImage w="1000px" src={mainImageURL} alt="Main" mx={2} />
           )}
-          <Box
-            border="1px solid"
-            borderColor="gray.300"
-            borderRadius="md"
-            mx={2}
+          <TransformWrapper
+            defaultScale={0.3}
+            // defaultPositionX={0}
+            // defaultPositionY={0}
+            minScale={0.3}
+            initialScale={0.3}
+            wheel={{ step: 0.2 }}
+            centerOnInit={true}
+            centerZoomedOut={true}
           >
-            <canvas id="previewCanvas"></canvas>
-          </Box>
+            {({ zoomIn, zoomOut, resetTransform, centerView }) => (
+              <div style={{ width: "100%", height: "100%" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    marginBottom: "10px",
+                  }}
+                >
+                  <Button onClick={() => zoomIn()} marginRight="5px">
+                    Zoom In
+                  </Button>
+                  <Button onClick={() => zoomOut()} marginRight="5px">
+                    Zoom Out
+                  </Button>
+                  <Button onClick={() => resetTransform()} marginRight="5px">
+                    Reset
+                  </Button>
+                  <Button onClick={() => centerView()}>Center</Button>
+                </div>
+                <TransformComponent
+                  wrapperStyle={{
+                    width: "1000px",
+                    maxWidth: "100%",
+                    maxHeight: "1000px",
+                    border: "1px solid",
+                  }}
+                >
+                  <canvas id="previewCanvas"></canvas>
+                </TransformComponent>
+              </div>
+            )}
+          </TransformWrapper>
           <canvas id="colorChart"></canvas>
         </Flex>
       </Box>

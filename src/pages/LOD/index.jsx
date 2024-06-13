@@ -443,7 +443,7 @@ function LOD() {
       <Box p={5}>
         <VStack spacing={5} maxW="600px" mx="auto">
           <Heading>Mosaic Image Generator</Heading>
-          <Link to="/lod">Classic</Link>
+          <Link to="/">Classic</Link>
           <FormControl id="mainImage">
             <FormLabel>Main Image</FormLabel>
             <Box
@@ -645,11 +645,14 @@ function LOD() {
           <canvas id="colorChart"></canvas>
         </Flex>
         <TransformWrapper
-          defaultScale={1}
+          defaultScale={0.3}
           defaultPositionX={0}
-          minScale={0.5}
           defaultPositionY={0}
+          minScale={0.3}
+          initialScale={0.3}
           wheel={{ step: 0.2 }}
+          centerOnInit
+          centerZoomedOut
         >
           {({ zoomIn, zoomOut, resetTransform, centerView }) => (
             <div style={{ width: "100%", height: "100%" }}>
@@ -675,6 +678,7 @@ function LOD() {
                 wrapperStyle={{
                   width: "1000px",
                   maxWidth: "100%",
+                  maxHeight: "1000px",
                   border: "1px solid",
                 }}
               >
