@@ -3,6 +3,7 @@ import MosaicGeneration from "./MosaicGeneration";
 import Grid from "./Grid";
 import LOD from "./LOD";
 import LOD2 from "./LOD2";
+import Statistics from "./Statistics";
 
 const routes = [
   {
@@ -29,6 +30,13 @@ const routes = [
   {
     path: "/lod2",
     Component: LOD2,
+    Layout: DefaultLayout,
+    secured: false,
+    exact: true,
+  },
+  {
+    path: "/statistics",
+    Component: Statistics,
     Layout: DefaultLayout,
     secured: false,
     exact: true,

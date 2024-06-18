@@ -52,7 +52,7 @@ const colorDistance = (color1, color2) => {
   );
 };
 
-export const isTransparentAlphaChannel = (imageData, edgesCut) => {
+export const isTransparentAlphaChannel = (imageData, edgesCut = 0) => {
   const pixels = imageData.data;
   for (let i = 3; i < pixels?.length || 0; i += 4) {
     if (pixels[i] < edgesCut) {
