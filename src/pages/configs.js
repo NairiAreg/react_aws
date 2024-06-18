@@ -2,6 +2,7 @@ import DefaultLayout from "../containers/DefaultLayout";
 import MosaicGeneration from "./MosaicGeneration";
 import Grid from "./Grid";
 import LOD from "./LOD";
+import LOD2 from "./LOD2";
 
 const routes = [
   {
@@ -21,6 +22,13 @@ const routes = [
   {
     path: "/lod",
     Component: LOD,
+    Layout: DefaultLayout,
+    secured: false,
+    exact: true,
+  },
+  {
+    path: "/lod2",
+    Component: LOD2,
     Layout: DefaultLayout,
     secured: false,
     exact: true,
