@@ -114,7 +114,9 @@ export const groupColors = (colors, tolerance = 10) => {
 };
 
 export const createColorChart = (stats, id) => {
-  const ctx = document.getElementById(id).getContext("2d");
+  const ctx = document
+    .getElementById(id)
+    .getContext("2d", { willReadFrequently: true });
   if (window.colorChartInstance) {
     window.colorChartInstance.destroy();
   }
@@ -173,7 +175,7 @@ export const correctAndDrawTile = (
   const tempCanvas = document.createElement("canvas");
   tempCanvas.width = tileWidth;
   tempCanvas.height = tileHeight;
-  const tempCtx = tempCanvas.getContext("2d");
+  const tempCtx = tempCanvas.getContext("2d", { willReadFrequently: true });
 
   // Draw the original tile on the temporary canvas
   tempCtx.drawImage(tile.canvas, 0, 0, tileWidth, tileHeight);
@@ -217,7 +219,9 @@ export const correctAndDrawTile = (
     const flippedCanvas = document.createElement("canvas");
     flippedCanvas.width = tileWidth;
     flippedCanvas.height = tileHeight;
-    const flippedCtx = flippedCanvas.getContext("2d");
+    const flippedCtx = flippedCanvas.getContext("2d", {
+      willReadFrequently: true,
+    });
 
     // Draw the flipped tile on the temporary canvas
     flippedCtx.translate(tileWidth, 0);
