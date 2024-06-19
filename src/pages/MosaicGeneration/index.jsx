@@ -18,6 +18,9 @@ import {
   Alert,
   AlertIcon,
   Checkbox,
+  RadioGroup,
+  Stack,
+  Radio,
 } from "@chakra-ui/react";
 import { FaFileUpload } from "react-icons/fa";
 import pica from "pica";
@@ -27,6 +30,10 @@ import {
   correctAndDrawTile,
   createColorChart,
   findBestMatchTileIndex,
+  generateBottomRightToTopLeftOrder,
+  generateRandomOrder,
+  generateSpiralOrder,
+  generateTopLeftToBottomRightOrder,
   getAverageColor,
   groupColors,
   isTransparentAlphaChannel,
@@ -43,6 +50,7 @@ function MosaicGeneration() {
   const [imageFiles, setImageFiles] = useState([]);
   const [reuseTilesCount, setReuseTilesCount] = useState(1);
   const [flip, setFlip] = useState();
+  const [orderType, setOrderType] = useState("spiral");
   const [drawnTilesState, setDrawnTiles] = useState(0);
   const [drawInterval, setDrawInterval] = useState(30);
   const [radius, setRadius] = useState(0);
@@ -193,42 +201,21 @@ function MosaicGeneration() {
       customImage.onload = resolve;
     });
 
-    // Spiral order directions (right, down, left, up)
-    const directions = [
-      { dx: 1, dy: 0 },
-      { dx: 0, dy: 1 },
-      { dx: -1, dy: 0 },
-      { dx: 0, dy: -1 },
-    ];
+    let order;
+    switch (orderType) {
+      case "spiral":
+        order = generateSpiralOrder(totalTilesX, totalTilesY);
+        break;
+      case "random":
+        order = generateRandomOrder(totalTilesX, totalTilesY);
+        break;
+      case "bottom-top":
+        order = generateBottomRightToTopLeftOrder(totalTilesX, totalTilesY);
+        break;
 
-    const spiralOrder = [];
-
-    // Initialize the starting point at the center of the grid
-    let cx = Math.floor(totalTilesX / 2);
-    let cy = Math.floor(totalTilesY / 2);
-
-    // Generate the spiral order
-    let x = cx;
-    let y = cy;
-    let directionIndex = 0;
-    let stepSize = 1;
-    let stepsInCurrentDirection = 0;
-
-    while (spiralOrder.length < totalTiles) {
-      if (x >= 0 && x < totalTilesX && y >= 0 && y < totalTilesY) {
-        spiralOrder.push({ x, y });
-      }
-      x += directions[directionIndex].dx;
-      y += directions[directionIndex].dy;
-      stepsInCurrentDirection++;
-
-      if (stepsInCurrentDirection === stepSize) {
-        directionIndex = (directionIndex + 1) % 4;
-        stepsInCurrentDirection = 0;
-        if (directionIndex === 0 || directionIndex === 2) {
-          stepSize++;
-        }
-      }
+      default:
+        order = generateTopLeftToBottomRightOrder(totalTilesX, totalTilesY);
+        break;
     }
 
     // Create the mosaic in spiral order
@@ -237,7 +224,7 @@ function MosaicGeneration() {
     const mainImageColors = [];
     const tileUsage = {};
 
-    for (const pos of spiralOrder) {
+    for (const pos of order) {
       const progressPercent = 50 + Math.round((currentTile / totalTiles) * 50);
       setProgress(() => progressPercent);
       await delay(); //! This is THE ONLY WAY to update the progress bar
@@ -378,7 +365,9 @@ function MosaicGeneration() {
       if (currentTile % updateInterval === 0) {
         // Draw the current state of the mosaic canvas to the screen
         const previewCanvas = document.getElementById("previewCanvas");
-        const previewCtx = previewCanvas.getContext("2d");
+        const previewCtx = previewCanvas.getContext("2d", {
+          willReadFrequently: true,
+        });
         previewCanvas.width = mosaicCanvas.width;
         previewCanvas.height = mosaicCanvas.height;
         previewCtx.drawImage(mosaicCanvas, 0, 0);
@@ -399,7 +388,9 @@ function MosaicGeneration() {
 
     // Final draw of the completed mosaic
     const previewCanvas = document.getElementById("previewCanvas");
-    const previewCtx = previewCanvas.getContext("2d");
+    const previewCtx = previewCanvas.getContext("2d", {
+      willReadFrequently: true,
+    });
     previewCanvas.width = mosaicCanvas.width;
     previewCanvas.height = mosaicCanvas.height;
     previewCtx.drawImage(mosaicCanvas, 0, 0);
@@ -617,6 +608,17 @@ function MosaicGeneration() {
             >
               Flip Tiles
             </Checkbox>
+          </FormControl>
+          <FormControl as="fieldset">
+            <FormLabel as="legend">Select Tile Drawing Order</FormLabel>
+            <RadioGroup onChange={setOrderType} value={orderType}>
+              <Stack direction="row">
+                <Radio value="spiral">Spiral 🌀</Radio>
+                <Radio value="random">Random 🎲</Radio>
+                <Radio value="top-bottom">Top to bottom ↘︎</Radio>
+                <Radio value="bottom-top">Bottom to top ↖️</Radio>
+              </Stack>
+            </RadioGroup>
           </FormControl>
           {isLoading && <Progress value={progress} size="lg" w="100%" />}
           <Button

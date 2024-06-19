@@ -238,3 +238,81 @@ export const correctAndDrawTile = (
   // Draw the corrected tile on the mosaic canvas if not flipping
   mosaicCtx.drawImage(tempCanvas, x, y, tileWidth, tileHeight);
 };
+export const generateSpiralOrder = (totalTilesX, totalTilesY) => {
+  const spiralOrder = [];
+  // Spiral order directions (right, down, left, up)
+  const directions = [
+    { dx: 1, dy: 0 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 },
+    { dx: 0, dy: -1 },
+  ];
+
+  // Initialize the starting point at the center of the grid
+  let cx = Math.floor(totalTilesX / 2);
+  let cy = Math.floor(totalTilesY / 2);
+
+  // Generate the spiral order
+  let x = cx;
+  let y = cy;
+  let directionIndex = 0;
+  let stepSize = 1;
+  let stepsInCurrentDirection = 0;
+
+  while (spiralOrder.length < totalTilesX * totalTilesY) {
+    if (x >= 0 && x < totalTilesX && y >= 0 && y < totalTilesY) {
+      spiralOrder.push({ x, y });
+    }
+    x += directions[directionIndex].dx;
+    y += directions[directionIndex].dy;
+    stepsInCurrentDirection++;
+
+    if (stepsInCurrentDirection === stepSize) {
+      directionIndex = (directionIndex + 1) % 4;
+      stepsInCurrentDirection = 0;
+      if (directionIndex === 0 || directionIndex === 2) {
+        stepSize++;
+      }
+    }
+  }
+
+  return spiralOrder;
+};
+
+export const generateRandomOrder = (totalTilesX, totalTilesY) => {
+  const randomOrder = [];
+
+  // Generate all tile positions
+  for (let y = 0; y < totalTilesY; y++) {
+    for (let x = 0; x < totalTilesX; x++) {
+      randomOrder.push({ x, y });
+    }
+  }
+
+  // Shuffle the array
+  for (let i = randomOrder.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [randomOrder[i], randomOrder[j]] = [randomOrder[j], randomOrder[i]];
+  }
+
+  return randomOrder;
+};
+
+export const generateTopLeftToBottomRightOrder = (totalTilesX, totalTilesY) => {
+  const order = [];
+  for (let y = 0; y < totalTilesY; y++) {
+    for (let x = 0; x < totalTilesX; x++) {
+      order.push({ x, y });
+    }
+  }
+  return order;
+};
+export const generateBottomRightToTopLeftOrder = (totalTilesX, totalTilesY) => {
+  const order = [];
+  for (let y = totalTilesY - 1; y >= 0; y--) {
+    for (let x = totalTilesX - 1; x >= 0; x--) {
+      order.push({ x, y });
+    }
+  }
+  return order;
+};
