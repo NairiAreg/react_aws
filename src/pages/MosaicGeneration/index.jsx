@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ChakraProvider,
   Box,
@@ -43,6 +43,7 @@ import SquareInfo from "components/SquareInfo";
 import CustomSlider from "components/CustomSlider";
 import { Link } from "react-router-dom";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import targetImage from "./target.jpg";
 
 function MosaicGeneration() {
   const [mainImage, setMainImage] = useState(null);
@@ -63,27 +64,65 @@ function MosaicGeneration() {
   const [progress, setProgress] = useState(0);
   const [colorCorrection, setColorCorrection] = useState(0);
 
+  const centerViewRef = useRef(null);
+
   const toast = useToast();
 
   useEffect(() => {
     const loadTiles = async () => {
-      const tileImages = await Promise.all(
-        imageFiles.map((file) => loadImage(file))
-      );
-      setTiles(tileImages);
+      try {
+        const tileImages = await Promise.all(
+          imageFiles.map(async (file) => {
+            try {
+              const image = await loadImage(file);
+              return image;
+            } catch (error) {
+              console.error(`Error loading image ${file.name}:`, error);
+              return null; // Return null for missing images
+            }
+          })
+        );
+        const validTileImages = tileImages.filter((image) => image !== null); // Filter out null values
+        setTiles(validTileImages);
+      } catch (error) {
+        console.error("Error loading tile images:", error);
+      }
     };
+
     if (imageFiles.length > 0) {
       loadTiles();
     }
   }, [imageFiles]);
 
+  useEffect(() => {
+    const fetchMainImage = async () => {
+      const imageUrl = `/imgs/targets/target.jpg`; // Adjust the file extension if necessary
+      setMainImageURL(imageUrl);
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        return;
+      }
+      const blob = await response.blob();
+      const file = new File([blob], `target.jpg`, { type: blob.type });
+      setMainImage(file);
+    };
+    fetchMainImage();
+  }, []);
+
   const handleMainImageChange = (e) => {
     const file = e.target.files[0];
+    if (!file) {
+      return;
+    }
     setMainImage(file);
     setMainImageURL(URL.createObjectURL(file));
   };
 
   const handleTileImagesChange = (e) => {
+    if (e.target.files.length === 0) {
+      return;
+    }
+
     setImageFiles(Array.from(e.target.files));
   };
 
@@ -106,18 +145,25 @@ function MosaicGeneration() {
     setIsLoading(false);
   };
 
-  const loadImagesFromDirectory = async (count) => {
+  const loadImagesFromDirectory = async (count = 5000) => {
     setIsLoading(true);
     const images = [];
     let i = 1;
 
-    while (images.length < count) {
-      const imageUrl = `/imgs/gev_friends/${i}.jpg`; // Adjust the file extension if necessary
-      const response = await fetch(imageUrl);
-      if (response.ok) {
+    // Attempt to load up to 1000 images, adjust this limit as necessary
+    while (i <= count) {
+      try {
+        const imageUrl = `/imgs/gev_friends/${i}.jpg`; // Adjust the file extension if necessary
+        const response = await fetch(imageUrl);
+        if (!response.ok) {
+          i++;
+          continue;
+        }
         const blob = await response.blob();
         const file = new File([blob], `${i}.jpg`, { type: blob.type });
         images.push(file);
+      } catch (error) {
+        console.error(`Error loading image ${i}:`, error);
       }
       i++;
     }
@@ -371,6 +417,9 @@ function MosaicGeneration() {
         previewCanvas.width = mosaicCanvas.width;
         previewCanvas.height = mosaicCanvas.height;
         previewCtx.drawImage(mosaicCanvas, 0, 0);
+        if (centerViewRef.current) {
+          centerViewRef.current();
+        }
       }
     }
 
@@ -401,9 +450,6 @@ function MosaicGeneration() {
     // const tileUsageStats = groupColors(
     //   Object.keys(tileUsage).map((key) => JSON.parse(key))
     // );
-
-    // console.log("Most wanted colors in the main image:", mainImageColorStats);
-    // console.log("Tile usage statistics:", tileUsageStats);
 
     // Call these functions with the statistics generated above
     //? tile usage info
@@ -478,7 +524,7 @@ function MosaicGeneration() {
                 />
                 <Text ml={3}>
                   {imageFiles.length > 0
-                    ? `${imageFiles.length} files selected`
+                    ? `${tiles.length} files selected`
                     : "Click to upload tile images"}
                 </Text>
               </Flex>
@@ -640,6 +686,9 @@ function MosaicGeneration() {
             wheel={{ step: 0.2 }}
             centerOnInit={true}
             centerZoomedOut={true}
+            onInit={(ref) => {
+              centerViewRef.current = ref.centerView;
+            }}
           >
             {({ zoomIn, zoomOut, resetTransform, centerView }) => (
               <Flex direction="column">
@@ -660,6 +709,9 @@ function MosaicGeneration() {
                     Reset
                   </Button>
                   <Button onClick={() => centerView()}>Center</Button>
+                  <Button onClick={() => centerViewRef.current()}>
+                    Center2
+                  </Button>
                 </div>
                 <TransformComponent
                   wrapperStyle={{

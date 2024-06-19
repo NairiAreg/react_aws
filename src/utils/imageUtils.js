@@ -5,11 +5,24 @@ export const loadImage = (file) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
-      img.onload = () => resolve(img);
+      img.onload = () => {
+        resolve(img);
+      };
+      img.onerror = (error) => {
+        console.error(`Error loading image ${file.name}:`, error);
+        reject(error);
+      };
       img.src = event.target.result;
     };
-    reader.onerror = (err) => reject(err);
-    reader.readAsDataURL(file);
+    reader.onerror = (error) => {
+      console.error(`FileReader error for file ${file.name}:`, error);
+      reject(error);
+    };
+    try {
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("err", error, file);
+    }
   });
 };
 

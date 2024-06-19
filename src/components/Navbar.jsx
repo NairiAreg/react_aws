@@ -51,7 +51,7 @@ const Navbar = () => {
           />
           <HStack spacing={8} alignItems={"center"}>
             <Box color="white" fontWeight="bold">
-              Logo
+              rePublic²
             </Box>
             <HStack
               as={"nav"}
