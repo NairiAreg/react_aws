@@ -17,6 +17,7 @@ import {
   IconButton,
   Alert,
   AlertIcon,
+  Checkbox,
 } from "@chakra-ui/react";
 import { FaFileUpload } from "react-icons/fa";
 import pica from "pica";
@@ -41,6 +42,7 @@ function MosaicGeneration() {
   const [mainImageURL, setMainImageURL] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
   const [reuseTilesCount, setReuseTilesCount] = useState(1);
+  const [flip, setFlip] = useState();
   const [drawnTilesState, setDrawnTiles] = useState(0);
   const [drawInterval, setDrawInterval] = useState(30);
   const [radius, setRadius] = useState(0);
@@ -304,7 +306,9 @@ function MosaicGeneration() {
             mosaicCtx,
             tileWidth,
             tileHeight,
-            +colorCorrection
+            +colorCorrection,
+            mainCtx,
+            flip
           );
           bestNonAdjacentMatchTile.count += 1;
           bestNonAdjacentMatchTile.positions.push({ x, y });
@@ -332,7 +336,9 @@ function MosaicGeneration() {
             mosaicCtx,
             tileWidth,
             tileHeight,
-            +colorCorrection
+            +colorCorrection,
+            mainCtx,
+            flip
           );
           bestMatchTile.count += 1;
           bestMatchTile.positions.push({ x, y });
@@ -353,7 +359,9 @@ function MosaicGeneration() {
           mosaicCtx,
           tileWidth,
           tileHeight,
-          +colorCorrection
+          +colorCorrection,
+          mainCtx,
+          flip
         );
         bestMatchTile.count += 1;
         bestMatchTile.positions.push({ x, y });
@@ -535,13 +543,6 @@ function MosaicGeneration() {
               Used {drawnTilesState} tiles to create the mosaic.
             </Alert>
           )}
-          <Button
-            colorScheme="teal"
-            onClick={handleSubmit}
-            isLoading={isLoading}
-          >
-            Create Mosaic
-          </Button>
           <FormControl id="reuseCount">
             <FormLabel>
               Reuse Count: {reuseTilesCount > 0 ? reuseTilesCount : "Infinity"}
@@ -608,7 +609,23 @@ function MosaicGeneration() {
               thumbColor="teal.500"
             />
           </FormControl>
+          <FormControl id="flipToggle">
+            <Checkbox
+              isChecked={flip}
+              onChange={(e) => setFlip(e.target.checked)}
+              colorScheme="teal"
+            >
+              Flip Tiles
+            </Checkbox>
+          </FormControl>
           {isLoading && <Progress value={progress} size="lg" w="100%" />}
+          <Button
+            colorScheme="teal"
+            onClick={handleSubmit}
+            isLoading={isLoading}
+          >
+            Create Mosaic
+          </Button>
         </VStack>
         <Flex mt={5} justify="center" flexWrap="wrap">
           {mainImageURL && (

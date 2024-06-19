@@ -126,10 +126,19 @@ export const createColorChart = (stats, id) => {
 
 // Utility function to blend two colors
 export const blendColors = (color1, color2, factor) => {
-  const r = Math.round(color1.r + factor * (color2.r - color1.r));
-  const g = Math.round(color1.g + factor * (color2.g - color1.g));
-  const b = Math.round(color1.b + factor * (color2.b - color1.b));
+  const r = Math.round(color1.r * (1 - factor) + color2.r * factor);
+  const g = Math.round(color1.g * (1 - factor) + color2.g * factor);
+  const b = Math.round(color1.b * (1 - factor) + color2.b * factor);
   return { r, g, b };
+};
+
+// Calculate color difference function
+export const colorDifference = (color1, color2) => {
+  return (
+    Math.abs(color1.r - color2.r) +
+    Math.abs(color1.g - color2.g) +
+    Math.abs(color1.b - color2.b)
+  );
 };
 
 // Helper function to correct and draw a tile
@@ -141,7 +150,9 @@ export const correctAndDrawTile = (
   mosaicCtx,
   tileWidth,
   tileHeight,
-  correctionFactor
+  correctionFactor,
+  mainCtx,
+  flip
 ) => {
   const correctedColor = blendColors(tile.color, avgColor, correctionFactor);
 
@@ -172,6 +183,58 @@ export const correctAndDrawTile = (
   }
   tempCtx.putImageData(imageData, 0, 0);
 
-  // Draw the corrected tile on the mosaic canvas
+  // Get 2 horizontal halves of main image tile
+  const mainImageTileAvg1 = getAverageColor(
+    mainCtx.getImageData(x, y, tileWidth / 2, tileHeight).data
+  );
+  const mainImageTileAvg2 = getAverageColor(
+    mainCtx.getImageData(x + tileWidth / 2, y, tileWidth / 2, tileHeight).data
+  );
+
+  // Get 2 horizontal halves of candidate tile (corrected)
+  const candidateTileAvg1 = getAverageColor(
+    tempCtx.getImageData(0, 0, tileWidth / 2, tileHeight).data
+  );
+  const candidateTileAvg2 = getAverageColor(
+    tempCtx.getImageData(tileWidth / 2, 0, tileWidth / 2, tileHeight).data
+  );
+
+  if (flip) {
+    // Create a temporary canvas for the flipped tile
+    const flippedCanvas = document.createElement("canvas");
+    flippedCanvas.width = tileWidth;
+    flippedCanvas.height = tileHeight;
+    const flippedCtx = flippedCanvas.getContext("2d");
+
+    // Draw the flipped tile on the temporary canvas
+    flippedCtx.translate(tileWidth, 0);
+    flippedCtx.scale(-1, 1);
+    flippedCtx.drawImage(tempCanvas, 0, 0, tileWidth, tileHeight);
+
+    // Get 2 horizontal halves of flipped tile
+    const flippedTileAvg1 = getAverageColor(
+      flippedCtx.getImageData(0, 0, tileWidth / 2, tileHeight).data
+    );
+    const flippedTileAvg2 = getAverageColor(
+      flippedCtx.getImageData(tileWidth / 2, 0, tileWidth / 2, tileHeight).data
+    );
+
+    // Calculate total differences for original and flipped states
+    const originalDifference =
+      colorDifference(mainImageTileAvg1, candidateTileAvg1) +
+      colorDifference(mainImageTileAvg2, candidateTileAvg2);
+
+    const flippedDifference =
+      colorDifference(mainImageTileAvg1, flippedTileAvg1) +
+      colorDifference(mainImageTileAvg2, flippedTileAvg2);
+
+    // Draw the best fitting tile on the mosaic canvas
+    if (flippedDifference < originalDifference) {
+      mosaicCtx.drawImage(flippedCanvas, x, y, tileWidth, tileHeight);
+      return;
+    }
+  }
+
+  // Draw the corrected tile on the mosaic canvas if not flipping
   mosaicCtx.drawImage(tempCanvas, x, y, tileWidth, tileHeight);
 };
