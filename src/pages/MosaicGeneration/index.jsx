@@ -190,6 +190,7 @@ function MosaicGeneration() {
       // // Disable image smoothing for sharp edges
       // mosaicCtx.imageSmoothingEnabled = false;
 
+      // Processing tiles
       console.log("Processing tiles...");
       let processedTiles = 0;
       const tileCanvases = await Promise.all(
@@ -216,6 +217,7 @@ function MosaicGeneration() {
           };
         })
       );
+      console.log("tileCanvases", tileCanvases);
 
       const availableTiles = [...tileCanvases];
       const delay = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -229,8 +231,16 @@ function MosaicGeneration() {
       // Custom image for transparent parts
       const customImage = new Image();
       customImage.src = "imgs/sqr.jpeg"; // Path to your custom image
-      await new Promise((resolve) => {
-        customImage.onload = resolve;
+      console.log("Loading custom image...");
+      await new Promise((resolve, reject) => {
+        customImage.onload = () => {
+          console.log("Custom image loaded successfully");
+          resolve();
+        };
+        customImage.onerror = () => {
+          console.error("Error loading custom image");
+          reject(new Error("Error loading custom image"));
+        };
       });
 
       let order;
@@ -421,7 +431,7 @@ function MosaicGeneration() {
         });
       }
 
-      // Final draw of the mosaic canvas
+      // Final draw of the completed mosaic
       const previewCanvas = document.getElementById("previewCanvas");
       const previewCtx = previewCanvas.getContext("2d", {
         willReadFrequently: true,
