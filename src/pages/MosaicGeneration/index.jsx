@@ -229,19 +229,20 @@ function MosaicGeneration() {
       let adjacentClones = 0;
 
       // Custom image for transparent parts
-      const customImage = new Image();
-      customImage.src = `/imgs/sqr.jpeg`; // Path to your custom image
-      console.log("Loading custom image...");
-      await new Promise((resolve, reject) => {
-        customImage.onload = () => {
-          console.log("Custom image loaded successfully");
-          resolve();
-        };
-        customImage.onerror = () => {
-          console.error("Error loading custom image");
-          reject(new Error("Error loading custom image"));
-        };
-      });
+      // TODO fix  when outline feature is needed, this way only works locally, in hosted version it cannot find image /imgs/sqr.jpeg
+      // const customImage = new Image();
+      // customImage.src = `/imgs/sqr.jpeg`; // Path to your custom image
+      // console.log("Loading custom image...");
+      // await new Promise((resolve, reject) => {
+      //   customImage.onload = () => {
+      //     console.log("Custom image loaded successfully");
+      //     resolve();
+      //   };
+      //   customImage.onerror = () => {
+      //     console.error("Error loading custom image");
+      //     reject(new Error("Error loading custom image"));
+      //   };
+      // });
 
       let order;
       switch (orderType) {
@@ -293,7 +294,7 @@ function MosaicGeneration() {
         if (isTransparentAlphaChannel(imageData, edgesCut)) {
           // TODO Can add a custom image here
           if (!isTransparent) {
-            //   mosaicCtx.drawImage(customImage, x, y, tileWidth, tileHeight);
+            // mosaicCtx.drawImage(customImage, x, y, tileWidth, tileHeight);
             // TODO Here is my mosaic image edges, where the transparent parts are making the average darker
           }
           continue;
