@@ -152,52 +152,60 @@ function MosaicGeneration() {
   };
 
   const createMosaic = async (mainImageFile, tiles, tileWidth, tileHeight) => {
-    setProgress(0);
-    const originalImg = await loadImage(mainImageFile);
-    const picaInstance = pica();
+    try {
+      console.log("Starting createMosaic");
+      setProgress(0);
 
-    // Create a canvas to resize the main image
-    const resizedCanvas = document.createElement("canvas");
+      console.log("Loading main image...");
+      const originalImg = await loadImage(mainImageFile);
+      const picaInstance = pica();
 
-    const aspectRatio = originalImg.height / originalImg.width;
-    // resizedCanvas.width = originalImg.width;
-    resizedCanvas.width = imageWidth;
-    resizedCanvas.height = Math.round(resizedCanvas.width * aspectRatio);
+      // Create a canvas to resize the main image
+      const resizedCanvas = document.createElement("canvas");
 
-    // Use pica to resize the main image
-    await picaInstance.resize(originalImg, resizedCanvas);
+      const aspectRatio = originalImg.height / originalImg.width;
+      // resizedCanvas.width = originalImg.width;
+      resizedCanvas.width = imageWidth;
+      resizedCanvas.height = Math.round(resizedCanvas.width * aspectRatio);
 
-    // Draw the resized image on a new canvas
-    const mainCanvas = document.createElement("canvas");
-    const mainCtx = mainCanvas.getContext("2d", { willReadFrequently: true });
-    mainCanvas.width = resizedCanvas.width;
-    mainCanvas.height = resizedCanvas.height;
-    mainCtx.drawImage(resizedCanvas, 0, 0);
+      // Use pica to resize the main image
+      console.log("Resizing main image...");
+      await picaInstance.resize(originalImg, resizedCanvas);
 
-    // Create a canvas for the mosaic
-    const mosaicCanvas = document.createElement("canvas");
-    mosaicCanvas.width = mainCanvas.width;
-    mosaicCanvas.height = mainCanvas.height;
-    const mosaicCtx = mosaicCanvas.getContext("2d", {
-      willReadFrequently: true,
-    });
+      // Draw the resized image on a new canvas
+      const mainCanvas = document.createElement("canvas");
+      const mainCtx = mainCanvas.getContext("2d", { willReadFrequently: true });
+      mainCanvas.width = resizedCanvas.width;
+      mainCanvas.height = resizedCanvas.height;
+      mainCtx.drawImage(resizedCanvas, 0, 0);
 
-    // // Disable image smoothing for sharp edges
-    // mosaicCtx.imageSmoothingEnabled = false;
+      // Create a canvas for the mosaic
+      const mosaicCanvas = document.createElement("canvas");
+      mosaicCanvas.width = mainCanvas.width;
+      mosaicCanvas.height = mainCanvas.height;
+      const mosaicCtx = mosaicCanvas.getContext("2d", {
+        willReadFrequently: true,
+      });
 
-    let processedTiles = 0;
-    const tileCanvases = await Promise.all(
-      tiles.map((tile) => {
-        const tileCanvas = document.createElement("canvas");
-        tileCanvas.width = tileWidth;
-        tileCanvas.height = tileHeight;
-        const tileCtx = tileCanvas.getContext("2d", {
-          willReadFrequently: true,
-        });
+      // // Disable image smoothing for sharp edges
+      // mosaicCtx.imageSmoothingEnabled = false;
 
-        return picaInstance.resize(tile, tileCanvas).then(() => {
+      console.log("Processing tiles...");
+      let processedTiles = 0;
+      const tileCanvases = await Promise.all(
+        tiles.map(async (tile, index) => {
+          const tileCanvas = document.createElement("canvas");
+          tileCanvas.width = tileWidth;
+          tileCanvas.height = tileHeight;
+          const tileCtx = tileCanvas.getContext("2d", {
+            willReadFrequently: true,
+          });
+
+          await picaInstance.resize(tile, tileCanvas);
           processedTiles++;
-          setProgress(Math.round((processedTiles / imageFiles.length) * 50));
+          setProgress(Math.round((processedTiles / tiles.length) * 50));
+          console.log(`Processed tile ${index + 1}/${tiles.length}`);
+
           return {
             canvas: tileCanvas,
             color: getAverageColor(
@@ -206,140 +214,162 @@ function MosaicGeneration() {
             count: 0, // Track how many times this tile has been used
             positions: [], // Track positions where the tile is used
           };
-        });
-      })
-    );
-
-    const availableTiles = [...tileCanvases];
-    const delay = () => new Promise((resolve) => setTimeout(resolve, 0));
-
-    const totalTilesX = Math.ceil(mainCanvas.width / tileWidth);
-    const totalTilesY = Math.ceil(mainCanvas.height / tileHeight);
-    const totalTiles = totalTilesX * totalTilesY;
-    let currentTile = 0;
-    let adjacentClones = 0;
-
-    // Custom image for transparent parts
-    const customImage = new Image();
-    customImage.src = "imgs/sqr.jpeg"; // Path to your custom image
-    await new Promise((resolve) => {
-      customImage.onload = resolve;
-    });
-
-    let order;
-    switch (orderType) {
-      case "spiral":
-        order = generateSpiralOrder(totalTilesX, totalTilesY);
-        break;
-      case "random":
-        order = generateRandomOrder(totalTilesX, totalTilesY);
-        break;
-      case "bottom-top":
-        order = generateBottomRightToTopLeftOrder(totalTilesX, totalTilesY);
-        break;
-
-      default:
-        order = generateTopLeftToBottomRightOrder(totalTilesX, totalTilesY);
-        break;
-    }
-
-    // Create the mosaic in spiral order
-    const updateInterval = drawInterval; // Update the canvas every drawInterval cycles
-    let drawnTiles = 0;
-    const mainImageColors = [];
-    const tileUsage = {};
-
-    for (const pos of order) {
-      const progressPercent = 50 + Math.round((currentTile / totalTiles) * 50);
-      setProgress(() => progressPercent);
-      await delay(); //! This is THE ONLY WAY to update the progress bar
-
-      const x = pos.x * tileWidth;
-      const y = pos.y * tileHeight;
-      currentTile++;
-
-      if (availableTiles.length === 0) {
-        console.warn("Not enough unique tiles to fill the mosaic.");
-        break;
-      }
-
-      const { data } = mainCtx.getImageData(x, y, tileWidth, tileHeight);
-      const avgColor = getAverageColor(data, true);
-      mainImageColors.push(avgColor);
-
-      // Check if the square is transparent
-      const imageData = mainCtx.getImageData(x, y, tileWidth, tileHeight);
-      const isTransparent = [avgColor.r, avgColor.g, avgColor.b].every(
-        (c) => c === 0
+        })
       );
 
-      if (isTransparentAlphaChannel(imageData, edgesCut)) {
-        // TODO Can add a custom image here
-        if (!isTransparent) {
-          //   mosaicCtx.drawImage(customImage, x, y, tileWidth, tileHeight);
-          // TODO Here is my mosaic image edges, where the transparent parts are making the average darker
-        }
-        continue;
+      const availableTiles = [...tileCanvases];
+      const delay = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+      const totalTilesX = Math.ceil(mainCanvas.width / tileWidth);
+      const totalTilesY = Math.ceil(mainCanvas.height / tileHeight);
+      const totalTiles = totalTilesX * totalTilesY;
+      let currentTile = 0;
+      let adjacentClones = 0;
+
+      // Custom image for transparent parts
+      const customImage = new Image();
+      customImage.src = "imgs/sqr.jpeg"; // Path to your custom image
+      await new Promise((resolve) => {
+        customImage.onload = resolve;
+      });
+
+      let order;
+      switch (orderType) {
+        case "spiral":
+          order = generateSpiralOrder(totalTilesX, totalTilesY);
+          break;
+        case "random":
+          order = generateRandomOrder(totalTilesX, totalTilesY);
+          break;
+        case "bottom-top":
+          order = generateBottomRightToTopLeftOrder(totalTilesX, totalTilesY);
+          break;
+        default:
+          order = generateTopLeftToBottomRightOrder(totalTilesX, totalTilesY);
+          break;
       }
 
-      drawnTiles++;
-      const bestMatchIndex = findBestMatchTileIndex(avgColor, availableTiles);
-      const bestMatchTile = availableTiles[bestMatchIndex];
+      console.log("Creating mosaic...");
+      const updateInterval = drawInterval; // Update the canvas every drawInterval cycles
+      let drawnTiles = 0;
+      const mainImageColors = [];
+      const tileUsage = {};
 
-      const isAdjacent = (pos) => {
-        const deltaX = Math.abs(pos.x - x);
-        const deltaY = Math.abs(pos.y - y);
-        return deltaX <= radius * tileWidth && deltaY <= radius * tileHeight;
-      };
+      for (const pos of order) {
+        const progressPercent =
+          50 + Math.round((currentTile / totalTiles) * 50);
+        setProgress(() => progressPercent);
+        await delay(); //! This is THE ONLY WAY to update the progress bar
 
-      // Parameters for color correction
-      if (bestMatchTile.positions.some(isAdjacent)) {
-        // Filter available tiles to exclude adjacent ones
-        const nonAdjacentTiles = availableTiles.filter(
-          (tile) =>
-            !tile.positions.some(isAdjacent) &&
-            (tile.count < reuseTilesCount || +reuseTilesCount === 0)
+        const x = pos.x * tileWidth;
+        const y = pos.y * tileHeight;
+        currentTile++;
+
+        if (availableTiles.length === 0) {
+          console.warn("Not enough unique tiles to fill the mosaic.");
+          break;
+        }
+
+        const { data } = mainCtx.getImageData(x, y, tileWidth, tileHeight);
+        const avgColor = getAverageColor(data, true);
+        mainImageColors.push(avgColor);
+
+        // Check if the square is transparent
+        const imageData = mainCtx.getImageData(x, y, tileWidth, tileHeight);
+        const isTransparent = [avgColor.r, avgColor.g, avgColor.b].every(
+          (c) => c === 0
         );
 
-        // Find the best match tile among the non-adjacent tiles
-        const bestNonAdjacentMatchIndex = findBestMatchTileIndex(
-          avgColor,
-          nonAdjacentTiles
-        );
-        const bestNonAdjacentMatchTile =
-          nonAdjacentTiles[bestNonAdjacentMatchIndex];
+        if (isTransparentAlphaChannel(imageData, edgesCut)) {
+          // TODO Can add a custom image here
+          if (!isTransparent) {
+            //   mosaicCtx.drawImage(customImage, x, y, tileWidth, tileHeight);
+            // TODO Here is my mosaic image edges, where the transparent parts are making the average darker
+          }
+          continue;
+        }
 
-        if (bestNonAdjacentMatchTile?.canvas) {
-          correctAndDrawTile(
-            bestNonAdjacentMatchTile,
-            avgColor,
-            x,
-            y,
-            mosaicCtx,
-            tileWidth,
-            tileHeight,
-            +colorCorrection,
-            mainCtx,
-            flip
+        drawnTiles++;
+        const bestMatchIndex = findBestMatchTileIndex(avgColor, availableTiles);
+        const bestMatchTile = availableTiles[bestMatchIndex];
+
+        const isAdjacent = (pos) => {
+          const deltaX = Math.abs(pos.x - x);
+          const deltaY = Math.abs(pos.y - y);
+          return deltaX <= radius * tileWidth && deltaY <= radius * tileHeight;
+        };
+
+        // Parameters for color correction
+        if (bestMatchTile.positions.some(isAdjacent)) {
+          // Filter available tiles to exclude adjacent ones
+          const nonAdjacentTiles = availableTiles.filter(
+            (tile) =>
+              !tile.positions.some(isAdjacent) &&
+              (tile.count < reuseTilesCount || +reuseTilesCount === 0)
           );
-          bestNonAdjacentMatchTile.count += 1;
-          bestNonAdjacentMatchTile.positions.push({ x, y });
 
-          const colorKey = JSON.stringify(bestNonAdjacentMatchTile.color);
-          tileUsage[colorKey] = (tileUsage[colorKey] || 0) + 1;
+          // Find the best match tile among the non-adjacent tiles
+          const bestNonAdjacentMatchIndex = findBestMatchTileIndex(
+            avgColor,
+            nonAdjacentTiles
+          );
+          const bestNonAdjacentMatchTile =
+            nonAdjacentTiles[bestNonAdjacentMatchIndex];
 
-          if (
-            bestNonAdjacentMatchTile.count >= reuseTilesCount &&
-            reuseTilesCount > 0
-          ) {
-            availableTiles.splice(
-              availableTiles.indexOf(bestNonAdjacentMatchTile),
-              1
+          if (bestNonAdjacentMatchTile?.canvas) {
+            correctAndDrawTile(
+              bestNonAdjacentMatchTile,
+              avgColor,
+              x,
+              y,
+              mosaicCtx,
+              tileWidth,
+              tileHeight,
+              +colorCorrection,
+              mainCtx,
+              flip
             );
+            bestNonAdjacentMatchTile.count += 1;
+            bestNonAdjacentMatchTile.positions.push({ x, y });
+
+            const colorKey = JSON.stringify(bestNonAdjacentMatchTile.color);
+            tileUsage[colorKey] = (tileUsage[colorKey] || 0) + 1;
+
+            if (
+              bestNonAdjacentMatchTile.count >= reuseTilesCount &&
+              reuseTilesCount > 0
+            ) {
+              availableTiles.splice(
+                availableTiles.indexOf(bestNonAdjacentMatchTile),
+                1
+              );
+            }
+          } else {
+            adjacentClones++;
+            // Fallback to drawing the best match tile if no suitable non-adjacent match found
+            correctAndDrawTile(
+              bestMatchTile,
+              avgColor,
+              x,
+              y,
+              mosaicCtx,
+              tileWidth,
+              tileHeight,
+              +colorCorrection,
+              mainCtx,
+              flip
+            );
+            bestMatchTile.count += 1;
+            bestMatchTile.positions.push({ x, y });
+
+            const colorKey = JSON.stringify(bestMatchTile.color);
+            tileUsage[colorKey] = (tileUsage[colorKey] || 0) + 1;
+
+            if (bestMatchTile.count >= reuseTilesCount && reuseTilesCount > 0) {
+              availableTiles.splice(bestMatchIndex, 1);
+            }
           }
         } else {
-          adjacentClones++;
-          // Fallback to drawing the best match tile if no suitable non-adjacent match found
           correctAndDrawTile(
             bestMatchTile,
             avgColor,
@@ -362,84 +392,65 @@ function MosaicGeneration() {
             availableTiles.splice(bestMatchIndex, 1);
           }
         }
-      } else {
-        correctAndDrawTile(
-          bestMatchTile,
-          avgColor,
-          x,
-          y,
-          mosaicCtx,
-          tileWidth,
-          tileHeight,
-          +colorCorrection,
-          mainCtx,
-          flip
-        );
-        bestMatchTile.count += 1;
-        bestMatchTile.positions.push({ x, y });
 
-        const colorKey = JSON.stringify(bestMatchTile.color);
-        tileUsage[colorKey] = (tileUsage[colorKey] || 0) + 1;
-
-        if (bestMatchTile.count >= reuseTilesCount && reuseTilesCount > 0) {
-          availableTiles.splice(bestMatchIndex, 1);
+        // Update the mosaic canvas every `updateInterval` cycles
+        if (currentTile % updateInterval === 0) {
+          // Draw the current state of the mosaic canvas to the screen
+          const previewCanvas = document.getElementById("previewCanvas");
+          const previewCtx = previewCanvas.getContext("2d", {
+            willReadFrequently: true,
+          });
+          previewCanvas.width = mosaicCanvas.width;
+          previewCanvas.height = mosaicCanvas.height;
+          previewCtx.drawImage(mosaicCanvas, 0, 0);
+          if (centerViewRef.current) {
+            centerViewRef.current();
+          }
         }
       }
 
-      // Update the mosaic canvas every `updateInterval` cycles
-      if (currentTile % updateInterval === 0) {
-        // Draw the current state of the mosaic canvas to the screen
-        const previewCanvas = document.getElementById("previewCanvas");
-        const previewCtx = previewCanvas.getContext("2d", {
-          willReadFrequently: true,
+      setDrawnTiles(drawnTiles);
+
+      if (adjacentClones > 0) {
+        toast({
+          title: `${adjacentClones} adjacent clones.`,
+          description: `${adjacentClones} tiles were adjacent to themselves because there was not enough space / tiles.`,
+          status: "info",
+          duration: 5000,
+          isClosable: true,
         });
-        previewCanvas.width = mosaicCanvas.width;
-        previewCanvas.height = mosaicCanvas.height;
-        previewCtx.drawImage(mosaicCanvas, 0, 0);
-        if (centerViewRef.current) {
-          centerViewRef.current();
-        }
       }
-    }
 
-    setDrawnTiles(drawnTiles);
+      // Final draw of the mosaic canvas
+      const previewCanvas = document.getElementById("previewCanvas");
+      const previewCtx = previewCanvas.getContext("2d", {
+        willReadFrequently: true,
+      });
+      previewCanvas.width = mosaicCanvas.width;
+      previewCanvas.height = mosaicCanvas.height;
+      previewCtx.drawImage(mosaicCanvas, 0, 0);
 
-    if (adjacentClones > 0) {
+      const mainImageColorStats = groupColors(mainImageColors);
+      createColorChart(mainImageColorStats, "colorChart");
+
+      // Convert the final mosaic canvas to a blob and create a URL
+      return new Promise((resolve) => {
+        mosaicCanvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          resolve(url);
+        });
+      });
+    } catch (error) {
+      console.error("Error in createMosaic:", error);
       toast({
-        title: `${adjacentClones} adjacent clones.`,
-        description: `${adjacentClones} tiles were adjacent to themselves because there was not enough space / tiles.`,
-        status: "info",
+        title: "Error",
+        description:
+          "An error occurred while creating the mosaic. Check console for details.",
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
     }
-
-    // Final draw of the completed mosaic
-    const previewCanvas = document.getElementById("previewCanvas");
-    const previewCtx = previewCanvas.getContext("2d", {
-      willReadFrequently: true,
-    });
-    previewCanvas.width = mosaicCanvas.width;
-    previewCanvas.height = mosaicCanvas.height;
-    previewCtx.drawImage(mosaicCanvas, 0, 0);
-
-    // Create and display statistics
-    const mainImageColorStats = groupColors(mainImageColors);
-    //? tile usage info
-    // const tileUsageStats = groupColors(
-    //   Object.keys(tileUsage).map((key) => JSON.parse(key))
-    // );
-
-    // Call these functions with the statistics generated above
-    //? tile usage info
-    createColorChart(mainImageColorStats, "colorChart");
-
-    return new Promise((resolve) => {
-      mosaicCanvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        resolve(url);
-      });
-    });
   };
 
   return (
