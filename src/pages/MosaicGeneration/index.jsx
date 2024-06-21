@@ -230,7 +230,7 @@ function MosaicGeneration() {
 
       // Custom image for transparent parts
       const customImage = new Image();
-      customImage.src = "imgs/sqr.jpeg"; // Path to your custom image
+      customImage.src = `/imgs/sqr.jpeg`; // Path to your custom image
       console.log("Loading custom image...");
       await new Promise((resolve, reject) => {
         customImage.onload = () => {
