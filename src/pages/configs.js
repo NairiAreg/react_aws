@@ -4,6 +4,7 @@ import Grid from "./Grid";
 import LOD from "./LOD";
 import LOD2 from "./LOD2";
 import Statistics from "./Statistics";
+import ImageGallery from "./ImageGallery";
 
 const routes = [
   {
@@ -37,6 +38,13 @@ const routes = [
   {
     path: "/statistics",
     Component: Statistics,
+    Layout: DefaultLayout,
+    secured: false,
+    exact: true,
+  },
+  {
+    path: "/gallery",
+    Component: ImageGallery,
     Layout: DefaultLayout,
     secured: false,
     exact: true,

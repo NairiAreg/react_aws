@@ -465,97 +465,93 @@ function MosaicGeneration() {
   };
 
   return (
-    <ChakraProvider>
-      <Box p={5}>
-        <MosaicForm
-          {...{
-            handleMainImageChange,
-            handleTileImagesChange,
-            loadImagesFromDirectory,
-            reuseTilesCount,
-            setReuseTilesCount,
-            flip,
-            setFlip,
-            orderType,
-            setOrderType,
-            drawInterval,
-            setDrawInterval,
-            radius,
-            setRadius,
-            edgesCut,
-            setEdgesCut,
-            tileWidth,
-            setTileWidth,
-            tileHeight,
-            setTileHeight,
-            imageWidth,
-            setImageWidth,
-            handleSubmit,
-            isLoading,
-            mainImage,
-            imageFiles,
-            drawnTilesState,
-            colorCorrection,
-            progress,
-            tiles,
-            setColorCorrection,
+    <Box p={5}>
+      <MosaicForm
+        {...{
+          handleMainImageChange,
+          handleTileImagesChange,
+          loadImagesFromDirectory,
+          reuseTilesCount,
+          setReuseTilesCount,
+          flip,
+          setFlip,
+          orderType,
+          setOrderType,
+          drawInterval,
+          setDrawInterval,
+          radius,
+          setRadius,
+          edgesCut,
+          setEdgesCut,
+          tileWidth,
+          setTileWidth,
+          tileHeight,
+          setTileHeight,
+          imageWidth,
+          setImageWidth,
+          handleSubmit,
+          isLoading,
+          mainImage,
+          imageFiles,
+          drawnTilesState,
+          colorCorrection,
+          progress,
+          tiles,
+          setColorCorrection,
+        }}
+      />
+      <Flex mt={5} justify="center" flexWrap="wrap">
+        {mainImageURL && (
+          <ChakraImage w="1000px" src={mainImageURL} alt="Main" mx={2} />
+        )}
+        <TransformWrapper
+          defaultScale={0.3}
+          minScale={0.1}
+          initialScale={0.3}
+          wheel={{ step: 0.2 }}
+          centerOnInit={true}
+          centerZoomedOut={true}
+          onInit={(ref) => {
+            centerViewRef.current = ref.centerView;
           }}
-        />
-        <Flex mt={5} justify="center" flexWrap="wrap">
-          {mainImageURL && (
-            <ChakraImage w="1000px" src={mainImageURL} alt="Main" mx={2} />
+        >
+          {({ zoomIn, zoomOut, resetTransform, centerView }) => (
+            <Flex direction="column">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  marginBottom: "10px",
+                }}
+              >
+                <Button onClick={() => zoomIn()} marginRight="5px">
+                  Zoom In
+                </Button>
+                <Button onClick={() => zoomOut()} marginRight="5px">
+                  Zoom Out
+                </Button>
+                <Button onClick={() => resetTransform()} marginRight="5px">
+                  Reset
+                </Button>
+                <Button onClick={() => centerView()}>Center</Button>
+                <Button onClick={() => centerViewRef.current()}>Center2</Button>
+              </div>
+              <TransformComponent
+                wrapperStyle={{
+                  width: "1000px",
+                  maxWidth: "100%",
+                  maxHeight: "1000px",
+                  border: "1px solid",
+                }}
+              >
+                <canvas id="previewCanvas"></canvas>
+              </TransformComponent>
+            </Flex>
           )}
-          <TransformWrapper
-            defaultScale={0.3}
-            minScale={0.3}
-            initialScale={0.3}
-            wheel={{ step: 0.2 }}
-            centerOnInit={true}
-            centerZoomedOut={true}
-            onInit={(ref) => {
-              centerViewRef.current = ref.centerView;
-            }}
-          >
-            {({ zoomIn, zoomOut, resetTransform, centerView }) => (
-              <Flex direction="column">
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    marginBottom: "10px",
-                  }}
-                >
-                  <Button onClick={() => zoomIn()} marginRight="5px">
-                    Zoom In
-                  </Button>
-                  <Button onClick={() => zoomOut()} marginRight="5px">
-                    Zoom Out
-                  </Button>
-                  <Button onClick={() => resetTransform()} marginRight="5px">
-                    Reset
-                  </Button>
-                  <Button onClick={() => centerView()}>Center</Button>
-                  <Button onClick={() => centerViewRef.current()}>
-                    Center2
-                  </Button>
-                </div>
-                <TransformComponent
-                  wrapperStyle={{
-                    width: "1000px",
-                    maxWidth: "100%",
-                    maxHeight: "1000px",
-                    border: "1px solid",
-                  }}
-                >
-                  <canvas id="previewCanvas"></canvas>
-                </TransformComponent>
-              </Flex>
-            )}
-          </TransformWrapper>
-          <canvas id="colorChart"></canvas>
-        </Flex>
-      </Box>
-    </ChakraProvider>
+        </TransformWrapper>
+        <canvas id="colorChart"></canvas>
+      </Flex>
+    </Box>
   );
 }
 

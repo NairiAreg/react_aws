@@ -16,6 +16,7 @@ const links = [
   { title: "GRID", to: "/grid" },
   { title: "LOD", to: "/lod" },
   { title: "Statistics", to: "/statistics" },
+  { title: "Gallery", to: "/gallery" },
 ];
 
 const NavLink = ({ children, to }) => {

@@ -21,6 +21,7 @@
     "lodash": "^4.17.21",
     "node-fetch": "^3.3.2",
     "openseadragon": "^4.1.1",
+    "p-limit": "^5.0.0",
     "path": "^0.12.7",
     "pica": "^9.0.1",
     "pixi-viewport": "^5.0.3",
@@ -35,6 +36,7 @@
     "react-window": "^1.8.10",
     "react-zoom-pan-pinch": "^3.4.4",
     "sharp": "^0.33.4",
+    "tesseract.js": "^5.1.0",
     "web-vitals": "^2.1.0"
   },
   "scripts": {

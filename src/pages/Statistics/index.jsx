@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ChakraProvider,
   Box,
@@ -20,11 +20,14 @@ import {
 } from "@chakra-ui/react";
 import { FaFileUpload } from "react-icons/fa";
 import pica from "pica";
+import Chart from "chart.js/auto";
 
 import {
   createColorChart,
+  createPieChart,
   getAverageColor,
   groupColors,
+  isTransparentAlphaChannel,
   loadImage,
 } from "utils/imageUtils";
 import SquareInfo from "components/SquareInfo";
@@ -36,7 +39,7 @@ function MosaicGeneration() {
   const [drawnTilesState, setDrawnTiles] = useState(0);
   const [tolerance, setTolerance] = useState(20);
   const [usageQuantity, setUsageQuantity] = useState(15);
-
+  const [edgesCut, setEdgesCut] = useState(1);
   const [tileWidth, setTileWidth] = useState(72);
   const [tileHeight, setTileHeight] = useState(72);
   const [imageWidth, setImageWidth] = useState(2880);
@@ -156,8 +159,12 @@ function MosaicGeneration() {
         const y = pos.y * tileHeight;
         currentTile++;
 
-        const { data } = mainCtx.getImageData(x, y, tileWidth, tileHeight);
-        const avgColor = getAverageColor(data, true);
+        const imageData = mainCtx.getImageData(x, y, tileWidth, tileHeight);
+        const avgColor = getAverageColor(imageData.data, true);
+
+        if (isTransparentAlphaChannel(imageData, edgesCut)) {
+          continue;
+        }
         mainImageColors.push(avgColor);
       }
 
@@ -170,6 +177,10 @@ function MosaicGeneration() {
     createColorChart(
       mainImageColorStats.filter(({ count }) => count > 15),
       "colorChart"
+    );
+    createPieChart(
+      mainImageColorStats.filter(({ count }) => count > 15),
+      "pieChart"
     );
   };
 
@@ -254,6 +265,26 @@ function MosaicGeneration() {
               />
             </FormControl>
           </HStack>
+          <FormControl id="cutFromEdges">
+            <FormLabel>Cut from edges: {edgesCut}</FormLabel>
+            <CustomSlider
+              min={1}
+              max={255}
+              value={edgesCut}
+              onChange={(value) => setEdgesCut(value)}
+              thumbColor="yellow.500"
+            />
+            <Box
+              w="200px"
+              h="200px"
+              borderColor="tomato"
+              bg="black"
+              borderStyle="solid"
+              borderWidth={`${edgesCut / 10}px`}
+              mx="auto"
+              mt={2}
+            />
+          </FormControl>
           <SquareInfo
             width={tileWidth}
             height={tileHeight}
@@ -274,7 +305,10 @@ function MosaicGeneration() {
           </Button>
           {isLoading && <Progress value={progress} size="lg" w="100%" />}
         </VStack>
-        <canvas id="colorChart"></canvas>
+        <Flex direction="column" maxW="1000px" mx="auto">
+          <canvas id="colorChart"></canvas>
+          <canvas id="pieChart"></canvas>
+        </Flex>
         {mainImageURLs.map((url, index) => (
           <ChakraImage key={index} w="1000px" src={url} alt="Main" mx={2} />
         ))}

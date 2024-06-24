@@ -139,6 +139,34 @@ export const createColorChart = (stats, id) => {
   });
 };
 
+export const createPieChart = (data, canvasId) => {
+  const ctx = document.getElementById(canvasId).getContext("2d");
+
+  // Convert color object to rgb string
+  const formatColor = (colorObj) =>
+    `rgb(${colorObj.r}, ${colorObj.g}, ${colorObj.b})`;
+
+  const total = data.reduce((sum, d) => sum + d.count, 0);
+
+  const chartData = {
+    labels: data.map((d) => {
+      const percentage = ((d.count / total) * 100).toFixed(2);
+      return `${formatColor(d.color)}: ${percentage}%`;
+    }),
+    datasets: [
+      {
+        data: data.map((d) => d.count), // Ensure count is a number
+        backgroundColor: data.map((d) => formatColor(d.color)), // Convert color to rgb string
+      },
+    ],
+  };
+
+  new Chart(ctx, {
+    type: "pie",
+    data: chartData,
+  });
+};
+
 // Utility function to blend two colors
 export const blendColors = (color1, color2, factor) => {
   const r = Math.round(color1.r * (1 - factor) + color2.r * factor);
