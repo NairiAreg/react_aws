@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { imageHash } = require("image-hash");
+const { imageHash } = require("image-hash"); // Ensure correct import
 
 const directory = "./outputs/cats"; // Path to your images folder
 
