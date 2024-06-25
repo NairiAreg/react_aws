@@ -205,7 +205,7 @@ function MosaicGeneration() {
           await picaInstance.resize(tile, tileCanvas);
           processedTiles++;
           setProgress(Math.round((processedTiles / tiles.length) * 50));
-          console.log(`Processed tile ${index + 1}/${tiles.length}`);
+          // console.log(`Processed tile ${index + 1}/${tiles.length}`);
 
           return {
             canvas: tileCanvas,

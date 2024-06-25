@@ -31,11 +31,11 @@ const fetchFlickrImages = async (text, totalResults) => {
           content_type: 1,
           sort: "relevance",
           safe_search: 1,
-          color_codes: "d",
+          //   color_codes: "1,2,3",
           orientation: "square",
         },
         headers: {
-          "User-Agent": "PostmanRuntime/7.28.4", // Example: mimic Postman's User-Agent header
+          "User-Agent": "PostmanRuntime/7.28.4",
         },
       });
 
