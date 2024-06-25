@@ -4,7 +4,7 @@ import sharp from "sharp";
 import pLimit from "p-limit";
 
 // Array of image URLs
-import imageUrls from "./inputs/cats.json" assert { type: "json" };
+import imageUrls from "./inputs/cats_input.json" assert { type: "json" };
 
 // Create a directory to store resized images
 const directory = "./outputs/cats";

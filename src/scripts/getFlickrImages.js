@@ -4,7 +4,8 @@ const fs = require("fs");
 const API_KEY = "4b68fdb26b1588067a3cddce7353322d";
 const API_URL = "https://api.flickr.com/services/rest";
 const PER_PAGE = 500;
-const DELAY_BETWEEN_REQUESTS = 1000; // 1 second delay between requests to avoid rate limiting
+const DELAY_BETWEEN_REQUESTS = 500; // 1 second delay between requests to avoid rate limiting
+const MAX_PAGES = 100;
 
 const constructFlickrImageUrl = (photo) => {
   return `https://farm${photo.farm}.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}.jpg`;
@@ -13,11 +14,10 @@ const constructFlickrImageUrl = (photo) => {
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const fetchFlickrImages = async (text, totalResults) => {
-  let imageUrls = [];
+  let imageUrls = new Set();
   let page = 1;
-  const pages = Math.ceil(totalResults / PER_PAGE);
 
-  while (imageUrls.length < totalResults && page <= pages) {
+  while (imageUrls.size < totalResults && page <= MAX_PAGES) {
     try {
       const response = await axios.get(API_URL, {
         params: {
@@ -31,7 +31,6 @@ const fetchFlickrImages = async (text, totalResults) => {
           content_type: 1,
           sort: "relevance",
           safe_search: 1,
-          //   color_codes: "1,2,3",
           orientation: "square",
         },
         headers: {
@@ -40,11 +39,13 @@ const fetchFlickrImages = async (text, totalResults) => {
       });
 
       const photos = response.data.photos.photo;
-      const urls = photos.map(constructFlickrImageUrl);
-      imageUrls = imageUrls.concat(urls);
+      photos.forEach((photo) => {
+        const url = constructFlickrImageUrl(photo);
+        imageUrls.add(url);
+      });
 
       console.log(
-        `Fetched page ${page}, got ${photos.length} images, total images: ${imageUrls.length}`
+        `Fetched page ${page}, got ${imageUrls.size} unique images so far`
       );
 
       page++;
@@ -53,14 +54,15 @@ const fetchFlickrImages = async (text, totalResults) => {
       console.error(`Error fetching page ${page}: ${error.message}`);
       if (error.response && error.response.status === 429) {
         console.log("Rate limit exceeded, waiting before retrying...");
-        await delay(DELAY_BETWEEN_REQUESTS);
+        await delay(DELAY_BETWEEN_REQUESTS * 5);
       } else {
         throw error;
       }
     }
   }
 
-  return imageUrls.slice(0, totalResults);
+  console.log(`Total unique images fetched: ${imageUrls.size}`);
+  return Array.from(imageUrls).slice(0, totalResults);
 };
 
 const saveImageUrls = (imageUrls, filename) => {
