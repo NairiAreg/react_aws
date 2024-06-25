@@ -31,7 +31,7 @@ const fetchFlickrImages = async (text, totalResults) => {
           content_type: 1,
           sort: "relevance",
           safe_search: 1,
-          orientation: "square",
+          //   orientation: "square",
         },
         headers: {
           "User-Agent": "PostmanRuntime/7.28.4",

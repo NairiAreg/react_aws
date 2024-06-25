@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  ChakraProvider,
   Box,
   Button,
   useToast,
@@ -35,9 +34,9 @@ function MosaicGeneration() {
   const [drawInterval, setDrawInterval] = useState(30);
   const [radius, setRadius] = useState(0);
   const [edgesCut, setEdgesCut] = useState(1);
-  const [tileWidth, setTileWidth] = useState(72);
-  const [tileHeight, setTileHeight] = useState(72);
-  const [imageWidth, setImageWidth] = useState(2880);
+  const [tileWidth, setTileWidth] = useState(137);
+  const [tileHeight, setTileHeight] = useState(137);
+  const [imageWidth, setImageWidth] = useState(6850);
   const [tiles, setTiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
