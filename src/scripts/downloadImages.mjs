@@ -13,7 +13,7 @@ const API_KEY = "4b68fdb26b1588067a3cddce7353322d";
 const API_URL = "https://api.flickr.com/services/rest";
 const PER_PAGE = 500;
 const DELAY_BETWEEN_REQUESTS = 500;
-const MAX_PAGES = 100;
+const MAX_PAGES = 50;
 
 const constructFlickrImageUrl = (photo) => {
   return `https://farm${photo.farm}.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}.jpg`;
