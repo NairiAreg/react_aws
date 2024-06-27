@@ -13,7 +13,8 @@ const API_KEY = "4b68fdb26b1588067a3cddce7353322d";
 const API_URL = "https://api.flickr.com/services/rest";
 const PER_PAGE = 500;
 const DELAY_BETWEEN_REQUESTS = 500;
-const MAX_PAGES = 50;
+const MAX_PAGES = 20;
+const IMAGES_PER_TERM = 5000;
 
 const constructFlickrImageUrl = (photo) => {
   return `https://farm${photo.farm}.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}.jpg`;
@@ -21,11 +22,11 @@ const constructFlickrImageUrl = (photo) => {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const fetchFlickrImages = async (text, totalResults) => {
+const fetchFlickrImages = async (text) => {
   let imageUrls = new Set();
   let page = 1;
 
-  while (imageUrls.size < totalResults && page <= MAX_PAGES) {
+  while (imageUrls.size < IMAGES_PER_TERM && page <= MAX_PAGES) {
     try {
       const response = await axios.get(API_URL, {
         params: {
@@ -70,7 +71,7 @@ const fetchFlickrImages = async (text, totalResults) => {
     }
   }
 
-  return Array.from(imageUrls).slice(0, totalResults);
+  return Array.from(imageUrls).slice(0, IMAGES_PER_TERM);
 };
 
 const downloadAndResizeImage = async (url, outputPath) => {
@@ -129,7 +130,7 @@ const removeSimilarDuplicates = async (directory) => {
     const hashes = await Promise.all(hashPromises);
 
     // Then, compare hashes and remove similar images
-    const similarityThreshold = 10; // Adjust this value to change sensitivity
+    const similarityThreshold = 20; // Adjust this value to change sensitivity
 
     for (let i = 0; i < hashes.length; i++) {
       const { file, hash } = hashes[i];
@@ -158,78 +159,44 @@ const removeSimilarDuplicates = async (directory) => {
   }
 };
 
-const removeDuplicates = async (directory) => {
-  try {
-    const files = await fs.readdir(directory);
-    const hashMap = new Map();
-
-    const pLimit = (await import("p-limit")).default;
-    const limit = pLimit(10);
-
-    const tasks = files.map((file) =>
-      limit(async () => {
-        const filePath = path.join(directory, file);
-        try {
-          const hash = await hashImage(filePath);
-          if (hashMap.has(hash)) {
-            await fs.unlink(filePath);
-            console.log(`Deleted duplicate: ${filePath}`);
-          } else {
-            hashMap.set(hash, filePath);
-          }
-        } catch (error) {
-          console.error(`Error processing ${filePath}:`, error);
-        }
-      })
-    );
-
-    await Promise.all(tasks);
-    console.log("Duplicate removal complete.");
-  } catch (error) {
-    console.error("Error reading directory:", error);
-  }
-};
-
 const main = async () => {
   const args = process.argv.slice(2);
-  if (args.length < 3) {
+  if (args.length < 2) {
     console.log(
-      "Usage: node downloadImages.mjs <totalResults> <outputName> <searchTerm1> [<searchTerm2> ...]"
+      "Usage: node downloadImages.mjs <mainFolderName> <searchTerm1> [<searchTerm2> ...]"
     );
     process.exit(1);
   }
 
-  const totalResults = parseInt(args[0], 10);
-  const outputName = args[1];
-  const searchTerms = args.slice(2);
+  const mainFolderName = args[0];
+  const searchTerms = args.slice(1);
 
-  const outputDir = path.join(__dirname, "outputs", outputName);
-  await fs.mkdir(outputDir, { recursive: true });
+  const mainOutputDir = path.join(__dirname, "outputs", mainFolderName);
+  await fs.mkdir(mainOutputDir, { recursive: true });
 
-  let allImageUrls = new Set();
-
-  // Fetch images for each search term
   for (const term of searchTerms) {
-    const urls = await fetchFlickrImages(term, totalResults);
-    urls.forEach((url) => allImageUrls.add(url));
+    const termOutputDir = path.join(mainOutputDir, term);
+    await fs.mkdir(termOutputDir, { recursive: true });
+
+    const urls = await fetchFlickrImages(term);
+    console.log(`Fetched ${urls.length} unique images for "${term}"`);
+
+    const pLimit = (await import("p-limit")).default;
+    const limit = pLimit(10);
+
+    const downloadTasks = urls.map((url, index) =>
+      limit(() =>
+        downloadAndResizeImage(url, path.join(termOutputDir, `${index}.jpg`))
+      )
+    );
+
+    await Promise.all(downloadTasks);
+
+    // Remove duplicates
+    await removeSimilarDuplicates(termOutputDir);
+
+    console.log(`Completed processing for "${term}"`);
   }
-
-  console.log(`Total unique images fetched: ${allImageUrls.size}`);
-
-  // Download and resize images
-  const pLimit = (await import("p-limit")).default;
-  const limit = pLimit(10);
-
-  const downloadTasks = Array.from(allImageUrls).map((url, index) =>
-    limit(() =>
-      downloadAndResizeImage(url, path.join(outputDir, `${index}.jpg`))
-    )
-  );
-
-  await Promise.all(downloadTasks);
-
-  // Remove duplicates
-  await removeSimilarDuplicates(outputDir);
 
   console.log("All operations completed successfully!");
 };

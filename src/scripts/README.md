@@ -5,4 +5,5 @@ Instruction to download images
 - node deleteDuplicateImages.js toy (deletes duplicated images from toy folder)
 
 Unified version
+
 - node downloadImages.mjs 20000 flowers "flower" "bouquet of flowers" "rose" "violet flower" "sunflower" "tulip" "orchid" "dahlia" "lotus flower" "marigol flower" "lily flower"
