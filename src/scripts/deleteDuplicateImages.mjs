@@ -1,7 +1,7 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { imageHash } from 'image-hash';
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+import { imageHash } from "image-hash";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,38 +25,75 @@ const hashImage = (filePath) => {
   });
 };
 
-// Main function to find and delete duplicates
-const removeDuplicates = async (directory) => {
+// Function to calculate Hamming distance between two hashes
+const hammingDistance = (hash1, hash2) => {
+  let distance = 0;
+  for (let i = 0; i < hash1.length; i++) {
+    if (hash1[i] !== hash2[i]) distance++;
+  }
+  return distance;
+};
+
+// Main function to find and delete similar duplicates
+const removeSimilarDuplicates = async (directory) => {
   try {
     const files = await fs.readdir(directory);
     const hashMap = new Map();
 
-    const pLimit = (await import('p-limit')).default;
+    const pLimit = (await import("p-limit")).default;
     const limit = pLimit(10); // Limit concurrency to 10
 
-    const tasks = files.map(file => limit(async () => {
-      const filePath = path.join(directory, file);
-      try {
-        const hash = await hashImage(filePath);
-        if (hashMap.has(hash)) {
-          await fs.unlink(filePath);
-          console.log(`Deleted duplicate: ${filePath}`);
-        } else {
-          hashMap.set(hash, filePath);
+    // First, calculate hashes for all images
+    const hashPromises = files.map((file) =>
+      limit(async () => {
+        const filePath = path.join(directory, file);
+        try {
+          const hash = await hashImage(filePath);
+          return { file, hash, filePath };
+        } catch (error) {
+          console.error(`Error processing ${filePath}:`, error);
+          return null;
         }
-      } catch (error) {
-        console.error(`Error processing ${filePath}:`, error);
-      }
-    }));
+      })
+    );
 
-    await Promise.all(tasks);
-    console.log("Duplicate removal complete.");
+    const hashes = (await Promise.all(hashPromises)).filter(
+      (result) => result !== null
+    );
+
+    // Then, compare hashes and remove similar images
+    const similarityThreshold = 20; // Adjust this value to change sensitivity
+
+    for (const { file, hash, filePath } of hashes) {
+      let isSimilar = false;
+      let originalFilePath = "";
+
+      for (const [existingHash, existingFilePath] of hashMap.entries()) {
+        const distance = hammingDistance(hash, existingHash);
+        if (distance <= similarityThreshold) {
+          isSimilar = true;
+          originalFilePath = existingFilePath;
+          break;
+        }
+      }
+
+      if (isSimilar) {
+        await fs.unlink(filePath);
+        console.log(
+          `Deleted similar image: ${filePath} which was similar to ${originalFilePath}`
+        );
+      } else {
+        hashMap.set(hash, filePath);
+      }
+    }
+
+    console.log("Similar image removal complete.");
   } catch (error) {
     console.error("Error reading directory:", error);
   }
 };
 
 // Start the process
-removeDuplicates(directory).catch((error) => {
+removeSimilarDuplicates(directory).catch((error) => {
   console.error("Error:", error);
 });

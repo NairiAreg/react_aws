@@ -102,6 +102,62 @@ const hashImage = (filePath) => {
   });
 };
 
+const hammingDistance = (hash1, hash2) => {
+  let distance = 0;
+  for (let i = 0; i < hash1.length; i++) {
+    if (hash1[i] !== hash2[i]) distance++;
+  }
+  return distance;
+};
+
+const removeSimilarDuplicates = async (directory) => {
+  try {
+    const files = await fs.readdir(directory);
+    const hashMap = new Map();
+    const pLimit = (await import("p-limit")).default;
+    const limit = pLimit(10);
+
+    // First, calculate hashes for all images
+    const hashPromises = files.map((file) =>
+      limit(async () => {
+        const filePath = path.join(directory, file);
+        const hash = await hashImage(filePath);
+        return { file, hash };
+      })
+    );
+
+    const hashes = await Promise.all(hashPromises);
+
+    // Then, compare hashes and remove similar images
+    const similarityThreshold = 10; // Adjust this value to change sensitivity
+
+    for (let i = 0; i < hashes.length; i++) {
+      const { file, hash } = hashes[i];
+      let isSimilar = false;
+
+      for (const [existingHash, existingFile] of hashMap.entries()) {
+        const distance = hammingDistance(hash, existingHash);
+        if (distance <= similarityThreshold) {
+          isSimilar = true;
+          break;
+        }
+      }
+
+      if (isSimilar) {
+        const filePath = path.join(directory, file);
+        await fs.unlink(filePath);
+        console.log(`Deleted similar image: ${filePath}`);
+      } else {
+        hashMap.set(hash, file);
+      }
+    }
+
+    console.log("Similar image removal complete.");
+  } catch (error) {
+    console.error("Error removing similar images:", error);
+  }
+};
+
 const removeDuplicates = async (directory) => {
   try {
     const files = await fs.readdir(directory);
@@ -173,7 +229,7 @@ const main = async () => {
   await Promise.all(downloadTasks);
 
   // Remove duplicates
-  await removeDuplicates(outputDir);
+  await removeSimilarDuplicates(outputDir);
 
   console.log("All operations completed successfully!");
 };
