@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   ChakraProvider,
   Box,
@@ -20,7 +20,6 @@ import {
 } from "@chakra-ui/react";
 import { FaFileUpload } from "react-icons/fa";
 import pica from "pica";
-import Chart from "chart.js/auto";
 
 import {
   createColorChart,
