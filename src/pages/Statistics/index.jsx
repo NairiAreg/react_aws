@@ -32,7 +32,7 @@ import {
 import SquareInfo from "components/SquareInfo";
 import CustomSlider from "components/CustomSlider";
 
-function MosaicGeneration() {
+function Statistics() {
   const [mainImages, setMainImages] = useState([]);
   const [mainImageURLs, setMainImageURLs] = useState([]);
   const [drawnTilesState, setDrawnTiles] = useState(0);
@@ -316,4 +316,4 @@ function MosaicGeneration() {
   );
 }
 
-export default MosaicGeneration;
+export default Statistics;

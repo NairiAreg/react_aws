@@ -10,6 +10,7 @@ import pica from "pica";
 import {
   correctAndDrawTile,
   createColorChart,
+  createPieChart,
   findBestMatchTileIndex,
   generateBottomRightToTopLeftOrder,
   generateRandomOrder,
@@ -41,6 +42,8 @@ function MosaicGeneration() {
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [colorCorrection, setColorCorrection] = useState(0);
+  const [tolerance, setTolerance] = useState(20);
+  const [usageQuantity, setUsageQuantity] = useState(15);
 
   const centerViewRef = useRef(null);
 
@@ -440,8 +443,18 @@ function MosaicGeneration() {
       previewCanvas.height = mosaicCanvas.height;
       previewCtx.drawImage(mosaicCanvas, 0, 0);
 
-      const mainImageColorStats = groupColors(mainImageColors);
-      createColorChart(mainImageColorStats, "colorChart");
+      // const mainImageColorStats = groupColors(mainImageColors);
+      // createColorChart(mainImageColorStats, "colorChart");
+
+      const mainImageColorStats = groupColors(mainImageColors, tolerance);
+      createColorChart(
+        mainImageColorStats.filter(({ count }) => count > usageQuantity),
+        "colorChart"
+      );
+      createPieChart(
+        mainImageColorStats.filter(({ count }) => count > usageQuantity),
+        "pieChart"
+      );
 
       // Convert the final mosaic canvas to a blob and create a URL
       return new Promise((resolve) => {
@@ -497,11 +510,21 @@ function MosaicGeneration() {
           progress,
           tiles,
           setColorCorrection,
+          tolerance,
+          setTolerance,
+          usageQuantity,
+          setUsageQuantity,
         }}
       />
       <Flex mt={5} justify="center" flexWrap="wrap">
         {mainImageURL && (
-          <ChakraImage w="1000px" src={mainImageURL} alt="Main" mx={2} />
+          <ChakraImage
+            mt="50px"
+            w="1000px"
+            src={mainImageURL}
+            alt="Main"
+            mx={2}
+          />
         )}
         <TransformWrapper
           defaultScale={0.3}
@@ -533,13 +556,12 @@ function MosaicGeneration() {
                   Reset
                 </Button>
                 <Button onClick={() => centerView()}>Center</Button>
-                <Button onClick={() => centerViewRef.current()}>Center2</Button>
               </div>
               <TransformComponent
                 wrapperStyle={{
                   width: "1000px",
                   maxWidth: "100%",
-                  maxHeight: "1000px",
+                  height: "1000px",
                   border: "1px solid",
                 }}
               >
@@ -548,7 +570,10 @@ function MosaicGeneration() {
             </Flex>
           )}
         </TransformWrapper>
-        <canvas id="colorChart"></canvas>
+        <Flex maxW="1000px">
+          <canvas id="colorChart"></canvas>
+          <canvas id="pieChart"></canvas>
+        </Flex>
       </Flex>
     </Box>
   );

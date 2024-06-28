@@ -57,6 +57,10 @@ const MosaicForm = ({
   progress,
   tiles,
   setColorCorrection,
+  tolerance,
+  setTolerance,
+  usageQuantity,
+  setUsageQuantity,
 }) => {
   return (
     <VStack spacing={5} maxW="600px" mx="auto">
@@ -199,26 +203,6 @@ const MosaicForm = ({
 
       <TicTacToeBoard size={1 + radius * 2} />
 
-      <FormControl id="cutFromEdges">
-        <FormLabel>Cut from edges: {edgesCut}</FormLabel>
-        <CustomSlider
-          min={1}
-          max={255}
-          value={edgesCut}
-          onChange={(value) => setEdgesCut(value)}
-          thumbColor="yellow.500"
-        />
-        <Box
-          w="200px"
-          h="200px"
-          borderColor="tomato"
-          bg="black"
-          borderStyle="solid"
-          borderWidth={`${edgesCut / 10}px`}
-          mx="auto"
-          mt={2}
-        />
-      </FormControl>
       <FormControl id="colorCorrection">
         <FormLabel>Color correction: {colorCorrection * 100}%</FormLabel>
         <CustomSlider
@@ -248,6 +232,44 @@ const MosaicForm = ({
             <Radio value="bottom-top">Bottom to top ↖️</Radio>
           </Stack>
         </RadioGroup>
+      </FormControl>
+      <FormControl id="colorTolerance">
+        <FormLabel>Color tolerance: {tolerance}</FormLabel>
+        <CustomSlider
+          max={100}
+          value={tolerance}
+          onChange={(value) => setTolerance(value)}
+          thumbColor="blue.500"
+        />
+      </FormControl>
+      <FormControl id="usageQuantity">
+        <FormLabel>Usage Quantity: {usageQuantity}</FormLabel>
+        <CustomSlider
+          max={100}
+          value={usageQuantity}
+          onChange={(value) => setUsageQuantity(value)}
+          thumbColor="red.500"
+        />
+      </FormControl>
+      <FormControl id="cutFromEdges">
+        <FormLabel>Cut from edges: {edgesCut}</FormLabel>
+        <CustomSlider
+          min={1}
+          max={255}
+          value={edgesCut}
+          onChange={(value) => setEdgesCut(value)}
+          thumbColor="yellow.500"
+        />
+        <Box
+          w="200px"
+          h="200px"
+          borderColor="tomato"
+          bg="black"
+          borderStyle="solid"
+          borderWidth={`${edgesCut / 10}px`}
+          mx="auto"
+          mt={2}
+        />
       </FormControl>
       {isLoading && <Progress value={progress} size="lg" w="100%" />}
       <Button colorScheme="teal" onClick={handleSubmit} isLoading={isLoading}>
