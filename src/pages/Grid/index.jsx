@@ -33,7 +33,7 @@ import {
   loadImage,
 } from "utils/imageUtils";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import MosaicForm from "./MosaicForm";
+import MosaicForm from "../MosaicGeneration/MosaicForm";
 
 function MosaicGeneration() {
   const [mainImage, setMainImage] = useState(null);
