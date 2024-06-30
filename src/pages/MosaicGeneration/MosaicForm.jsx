@@ -65,7 +65,6 @@ const MosaicForm = ({
   return (
     <VStack spacing={5} maxW="600px" mx="auto">
       <Heading>Mosaic Image Generator</Heading>
-      <Link to="/lod">LOD</Link>
       <FormControl id="mainImage">
         <FormLabel>Main Image</FormLabel>
         <Box border="1px dashed" borderColor="gray.300" p={3} borderRadius="md">
