@@ -5,6 +5,15 @@ import {
   useToast,
   Flex,
   Image as ChakraImage,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+  Input,
+  useDisclosure,
 } from "@chakra-ui/react";
 import pica from "pica";
 import {
@@ -44,6 +53,55 @@ function MosaicGeneration() {
   const [colorCorrection, setColorCorrection] = useState(0);
   const [tolerance, setTolerance] = useState(20);
   const [usageQuantity, setUsageQuantity] = useState(15);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [selectedTile, setSelectedTile] = useState(null);
+  const [newTileImage, setNewTileImage] = useState(null);
+  // const [panning, setPanning] = useState();
+
+  const panningRef = useRef(false); // Add this line
+
+  useEffect(() => {
+    const previewCanvas = document.getElementById("previewCanvas");
+
+    const handleMouseMove = (event) => {
+      if (event.buttons === 1) {
+        // If the left mouse button is pressed
+        panningRef.current = true;
+      }
+    };
+
+    const handleClick = (event) => {
+      if (panningRef.current) {
+        panningRef.current = false;
+        return;
+      }
+
+      const rect = previewCanvas.getBoundingClientRect();
+      const scaleX = previewCanvas.width / rect.width;
+      const scaleY = previewCanvas.height / rect.height;
+      const x = (event.clientX - rect.left) * scaleX;
+      const y = (event.clientY - rect.top) * scaleY;
+
+      const tileX = Math.floor(x / tileWidth);
+      const tileY = Math.floor(y / tileHeight);
+      const tileIndex =
+        tileY * Math.floor(previewCanvas.width / tileWidth) + tileX;
+
+      console.log(
+        `Tile clicked: (${tileX}, ${tileY}) (scaleX: ${+scaleX.toFixed(2)})`
+      );
+      handleTileClick(tileX, tileY, tileIndex);
+    };
+
+    previewCanvas.addEventListener("mousemove", handleMouseMove);
+    previewCanvas.addEventListener("click", handleClick);
+
+    // Clean up event listeners on unmount
+    return () => {
+      previewCanvas.removeEventListener("mousemove", handleMouseMove);
+      previewCanvas.removeEventListener("click", handleClick);
+    };
+  }, [tileWidth, tileHeight]);
 
   const centerViewRef = useRef(null);
 
@@ -151,6 +209,70 @@ function MosaicGeneration() {
 
     setImageFiles(images);
     setIsLoading(false);
+  };
+
+  const handleTileClick = (x, y) => {
+    // console.log(`Tile clicked: (${x}, ${y})`);
+    setSelectedTile({ x, y });
+    onOpen();
+  };
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setNewTileImage(file);
+    }
+  };
+
+  const updateTileImage = async () => {
+    if (selectedTile && newTileImage) {
+      const newTileImageElement = await loadImage(newTileImage);
+      const canvas = document.getElementById("previewCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const { x, y } = selectedTile;
+
+      // Get the average color of the area in the main image
+      const mainImageData = ctx.getImageData(
+        x * tileWidth,
+        y * tileHeight,
+        tileWidth,
+        tileHeight
+      );
+      const mainAvgColor = getAverageColor(mainImageData.data);
+
+      // Create a temporary canvas for the new tile
+      const tileCanvas = document.createElement("canvas");
+      tileCanvas.width = tileWidth;
+      tileCanvas.height = tileHeight;
+      const tileCtx = tileCanvas.getContext("2d", { willReadFrequently: true });
+      tileCtx.drawImage(newTileImageElement, 0, 0, tileWidth, tileHeight);
+
+      // Get the average color of the new tile
+      const tileAvgColor = getAverageColor(
+        tileCtx.getImageData(0, 0, tileWidth, tileHeight).data
+      );
+
+      console.log("Main image color:", mainAvgColor);
+      console.log("New tile color:", tileAvgColor);
+      console.log("Color correction factor:", +colorCorrection);
+
+      // Correct and draw the new tile
+      correctAndDrawTile(
+        { canvas: tileCanvas, color: tileAvgColor },
+        mainAvgColor, // Use the main image color as the target
+        x * tileWidth,
+        y * tileHeight,
+        ctx,
+        tileWidth,
+        tileHeight,
+        +colorCorrection,
+        ctx, // Use the main canvas context
+        flip
+      );
+
+      onClose();
+    }
   };
 
   const createMosaic = async (mainImageFile, tiles, tileWidth, tileHeight) => {
@@ -443,6 +565,49 @@ function MosaicGeneration() {
       previewCanvas.height = mosaicCanvas.height;
       previewCtx.drawImage(mosaicCanvas, 0, 0);
 
+      // Add event listener to the canvas for click events
+      // previewCanvas.addEventListener("click", handleClick);
+      // previewCanvas.addEventListener("click", (event) => {
+      //   console.log("🟢", panning);
+      //   if (panning) {
+      //     // setPanning(false);
+      //     return;
+      //   }
+      //   const rect = previewCanvas.getBoundingClientRect();
+
+      //   const scaleX = previewCanvas.width / rect.width;
+      //   const scaleY = previewCanvas.height / rect.height;
+      //   const x = (event.clientX - rect.left) * scaleX;
+      //   const y = (event.clientY - rect.top) * scaleY;
+
+      //   const tileX = Math.floor(x / tileWidth);
+      //   const tileY = Math.floor(y / tileHeight);
+
+      //   const tileIndex =
+      //     tileY * Math.floor(previewCanvas.width / tileWidth) + tileX;
+
+      //   console.log(
+      //     `Tile clicked: (${tileX}, ${tileY}) (scaleX: ${+scaleX.toFixed(2)})`
+      //   );
+
+      //   handleTileClick(tileX, tileY, tileIndex);
+      // });
+
+      // previewCanvas.addEventListener("mousemove", (event) => {
+      //   if (event.buttons === 1) {
+      //     // If the left mouse button is pressed
+      //     setPanning(true);
+      //   }
+      // });
+
+      // previewCanvas.addEventListener("mouseup", (event) => {
+      //   setPanning(false);
+      // });
+
+      // previewCanvas.addEventListener("mouseleave", (event) => {
+      //   setPanning(false);
+      // });
+
       // const mainImageColorStats = groupColors(mainImageColors);
       // createColorChart(mainImageColorStats, "colorChart");
 
@@ -475,6 +640,7 @@ function MosaicGeneration() {
       });
     }
   };
+  // console.log(panning);
 
   return (
     <Box p={5}>
@@ -575,6 +741,24 @@ function MosaicGeneration() {
           <canvas id="pieChart"></canvas>
         </Flex>
       </Flex>
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Upload New Tile Image</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Input type="file" accept="image/*" onChange={handleFileUpload} />
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={updateTileImage}>
+              Upload
+            </Button>
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }
